@@ -228,6 +228,32 @@ const dirtyAfter = await page.evaluate(() => ({
 }));
 (!dirtyAfter.hidden && dirtyAfter.attention) ? pass('"unsaved" indicator + pulsing Save appear after an online edit') : fail(`dirty indicator not shown: ${JSON.stringify(dirtyAfter)}`);
 
+// 11) Main-card marks: correct = green ✓, wrong = red ✗
+await page.goto(file, { waitUntil: 'networkidle' });
+await page.waitForTimeout(120);
+await setWinner('R16-1', 'Германия'); // everyone picked Германия → all right (green ✓)
+await setWinner('R16-9', 'Бразилия'); // Митя & Денис picked Япония → wrong (red ✗)
+await page.waitForTimeout(100);
+const marks = await page.evaluate(() => {
+  const grn = (el) => getComputedStyle(el).color;
+  const card = (id) => document.querySelector(`select[data-id="${id}"]`).closest('.match');
+  const rightPick = card('R16-1').querySelector('.pick.right');
+  const wrongCard = card('R16-9');
+  const wrongPick = wrongCard.querySelector('.pick.wrong');
+  return {
+    rightMark: rightPick.querySelector('.tick').textContent.trim(),
+    rightColor: grn(rightPick.querySelector('.pteam')),
+    wrongMark: wrongPick.querySelector('.tick').textContent.trim(),
+    wrongColor: grn(wrongPick.querySelector('.pteam')),
+  };
+});
+console.log('MARKS:', JSON.stringify(marks));
+(marks.rightMark === '✓') ? pass('correct pick shows ✓') : fail(`right mark ${marks.rightMark}`);
+(marks.wrongMark === '✗') ? pass('wrong pick shows ✗') : fail(`wrong mark ${marks.wrongMark}`);
+// green ~ rgb(47,125,79); red ~ rgb(224,69,43)
+(marks.rightColor.includes('47, 125, 79')) ? pass('correct pick is green') : fail(`right color ${marks.rightColor}`);
+(marks.wrongColor.includes('224, 69, 43')) ? pass('wrong pick is red') : fail(`wrong color ${marks.wrongColor}`);
+
 console.log('CONSOLE ERRORS:', consoleErrors.length ? consoleErrors : 'none');
 if (consoleErrors.length) fail('console errors present');
 

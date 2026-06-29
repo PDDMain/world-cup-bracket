@@ -167,12 +167,17 @@
   .pick{background:var(--paper);padding:9px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
   .pick .pname{font-size:12px;color:var(--ink-soft);font-weight:600}
   .pick .pteam{font-size:13px;font-weight:500}
-  .pick.right{background:var(--hit-soft)}
-  .pick.right .pteam{color:var(--hit);font-weight:700}
-  .pick.right .pname{color:var(--hit)}
-  .pick .tick{font-size:11px;opacity:0;transition:.2s;color:var(--hit);font-weight:700}
-  .pick.right .tick{opacity:1}
-  .pick.wrong .pteam{color:var(--ink-soft);text-decoration:line-through;text-decoration-color:#c9bfa8}
+  .pick .tick{font-size:12px;opacity:0;transition:.2s;font-weight:800}
+  /* угадал — зелёный + ✓ */
+  .pick.right{background:rgba(47,125,79,.15)}
+  .pick.right .pteam{color:var(--grass);font-weight:700}
+  .pick.right .pname{color:var(--grass)}
+  .pick.right .tick{opacity:1;color:var(--grass)}
+  /* не угадал — красный + ✗ */
+  .pick.wrong{background:rgba(224,69,43,.10)}
+  .pick.wrong .pteam{color:var(--hit);font-weight:600;text-decoration:line-through;text-decoration-color:rgba(224,69,43,.45)}
+  .pick.wrong .pname{color:var(--hit)}
+  .pick.wrong .tick{opacity:1;color:var(--hit)}
 
   footer{margin-top:40px;padding-top:20px;border-top:1px solid var(--line);
     color:var(--chalk-soft);font-size:12px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
@@ -1112,9 +1117,10 @@ function renderMatches(){
         const v = row.preds[n] || "—";
         let cls='';
         if(actual){ cls = v===actual ? 'right' : (v==="—" ? '' : 'wrong'); }
+        const mark = cls==='right' ? ' ✓' : (cls==='wrong' ? ' ✗' : '');
         return `<div class="pick ${cls}">
           <span class="pname">${esc(n)}</span>
-          <span class="pteam">${esc(v)}<span class="tick"> ✓</span></span>
+          <span class="pteam">${esc(v)}<span class="tick">${mark}</span></span>
         </div>`;
       }).join('');
       html += `<div class="match ${actual?'decided':''} ${isReady?'':'pending'}">
