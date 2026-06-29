@@ -307,17 +307,32 @@ let online = false;
 //   потому что опрос идёт только при загрузке страницы).
 // Запись: PATCH с GitHub-токеном (scope gist), который вводят в момент сохранения.
 const GIST_ID = "__GIST_ID__";
+const GIST_USER = "__GIST_USER__";
 const GIST_FILE = "results.json";
 const GIST_API = "https://api.github.com/gists/" + GIST_ID;
+const GIST_RAW = "https://gist.githubusercontent.com/" + GIST_USER + "/" + GIST_ID + "/raw/" + GIST_FILE;
 
+// Свежее чтение через GitHub API (лимит 60/час на IP).
+async function readFromApi(){
+  const r = await fetch(GIST_API, { headers:{'Accept':'application/vnd.github+json'} });
+  if(!r.ok) throw new Error('api ' + r.status);
+  const j = await r.json();
+  const f = j.files && j.files[GIST_FILE];
+  let content = f ? f.content : '{}';
+  if(f && f.truncated && f.raw_url){ content = await (await fetch(f.raw_url)).text(); }
+  return content;
+}
+// Резервное чтение через CDN (без лимита запросов; данные могут отставать до ~5 минут).
+async function readFromRaw(){
+  const r = await fetch(GIST_RAW + '?t=' + Date.now(), { cache:'no-store' });
+  if(!r.ok) throw new Error('raw ' + r.status);
+  return await r.text();
+}
 async function pullResults(){
+  let content = null;
+  try{ content = await readFromApi(); }
+  catch(e){ try{ content = await readFromRaw(); }catch(e2){ return false; } }
   try{
-    const r = await fetch(GIST_API, { headers:{'Accept':'application/vnd.github+json'} });
-    if(!r.ok) return false;
-    const j = await r.json();
-    const f = j.files && j.files[GIST_FILE];
-    let content = f ? f.content : '{}';
-    if(f && f.truncated && f.raw_url){ content = await (await fetch(f.raw_url)).text(); }
     const parsed = content ? JSON.parse(content) : {};
     RESULTS = (parsed && typeof parsed==='object' && !Array.isArray(parsed)) ? parsed : {};
     pruneInvalid();
