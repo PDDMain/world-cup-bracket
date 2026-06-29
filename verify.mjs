@@ -47,6 +47,12 @@ tabs.length === 7 ? pass('7 stage tabs incl. 1/16') : fail(`expected 7 tabs got 
 const total = await page.textContent('#pillTotal');
 total.trim() === '32' ? pass('32 total matches') : fail(`total ${total} != 32`);
 
+// storage: page should read the shared Gist on load (dot goes green / online)
+const dot = await page.getAttribute('#syncDot', 'class');
+dot.includes('on') ? pass('gist read OK on load (online)') : fail(`syncDot=${dot} (gist read failed)`);
+const storageNote = await page.textContent('#storageNote');
+storageNote.includes('Gist') ? pass('storage note mentions Gist') : fail(`note: ${storageNote}`);
+
 // 2) Before deciding, an 1/8 match is pending/disabled with no real teams
 let r81 = await matchInfo('R8-1');
 r81.disabled ? pass('R8-1 disabled before feeders decided') : fail('R8-1 should be disabled initially');

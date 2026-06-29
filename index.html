@@ -241,8 +241,8 @@
     <div class="seg" id="stageSeg" role="tablist" aria-label="Фильтр по стадии"></div>
     <div class="admin">
       <span class="synced" id="syncDot" title="состояние синхронизации" role="status" aria-live="polite"></span>
-      <button class="btn" id="setupBtn">Синхронизация</button>
-      <input id="writeKey" type="password" placeholder="ключ записи" autocomplete="off" aria-label="Master-ключ JSONBin для сохранения результатов" title="Master-ключ JSONBin — нужен только чтобы сохранять результаты">
+      <button class="btn" id="setupBtn">Как вносить</button>
+      <input id="writeKey" type="password" placeholder="GitHub-токен (gist)" autocomplete="off" aria-label="GitHub-токен с правом gist для сохранения результатов" title="GitHub-токен (scope gist) — нужен только чтобы сохранять результаты, нигде не хранится">
       <button class="btn save" id="saveBtn">Сохранить</button>
     </div>
     <p class="hint" id="modeHint"></p>
@@ -260,31 +260,26 @@
 <div class="modal" id="setupModal" hidden role="dialog" aria-modal="true" aria-labelledby="setupTitle">
   <div class="sheet">
     <button class="x" id="setupClose" aria-label="Закрыть">✕</button>
-    <h3 id="setupTitle">Общая синхронизация</h3>
-    <p class="mtext">Чтобы все видели одни и те же результаты, приложение хранит их
-      в бесплатном «бине» на JSONBin.io. Настройка займёт минуту — её делает один человек,
-      остальным достаточно открыть ссылку.</p>
+    <h3 id="setupTitle">Общие результаты</h3>
+    <p class="mtext">Результаты у всех <b>общие автоматически</b>: они хранятся в Gist на GitHub
+      и подгружаются при открытии страницы. Зрителям ничего настраивать не нужно —
+      достаточно открыть ссылку.</p>
+
+    <p class="mtext">Чтобы <b>вносить</b> результаты, нужен GitHub-токен с доступом к Gist.
+      Его вводят только в момент сохранения — в файле он не хранится и в ссылку не попадает.</p>
 
     <ol class="steps">
-      <li>Зарегистрируйтесь на <a href="https://jsonbin.io" target="_blank" rel="noopener">jsonbin.io</a> (бесплатно).</li>
-      <li>Создайте новый <b>Bin</b> с содержимым <code>{}</code> и скопируйте его <b>BIN ID</b>
-        (из адресной строки или раздела API).</li>
-      <li>В разделе <b>API Keys</b> скопируйте <b>Master Key</b>
-        и создайте <b>Access Key</b> (только чтение).</li>
+      <li>Откройте <a href="https://github.com/settings/tokens/new?scopes=gist&description=World+Cup+bracket" target="_blank" rel="noopener">страницу создания токена</a>
+        (classic, отмечен scope <code>gist</code>) и нажмите <b>Generate token</b>.
+        Либо fine-grained токен с правом <code>Gists: Read and write</code>.</li>
+      <li>Скопируйте токен (он показывается один раз).</li>
+      <li>Вставьте его в поле <b>«GitHub-токен»</b>, выберите победителей и нажмите <b>Сохранить</b>.</li>
     </ol>
 
-    <label class="fld"><span>BIN ID</span>
-      <input id="cfgBin" placeholder="напр. 66f0a1b2ac...">
-    </label>
-    <label class="fld"><span>Access Key (только чтение — попадёт в ссылку для всех)</span>
-      <input id="cfgRead" placeholder="$2a$10$... read-only">
-    </label>
-
-    <p class="mtext small">Master-ключ <b>нигде не сохраняется</b> в файле — вы вводите его
-      каждый раз, когда сохраняете результат. Так его не увидят те, кому вы дали ссылку.</p>
+    <p class="mtext small">Токен можно отозвать в любой момент в настройках GitHub.
+      Совет: используйте отдельный токен только со scope <code>gist</code>.</p>
 
     <div class="mrow">
-      <button class="btn save" id="cfgSave">Подключить</button>
       <button class="btn" id="cfgShare">Скопировать ссылку для всех</button>
     </div>
     <p class="mtext small" id="cfgState"></p>
@@ -845,45 +840,40 @@ DATA.rows.forEach(r => byId[r.id] = r);
 
 let RESULTS = {};
 let activeStage = "all";
-let CFG = loadCfg();
 let online = false;
 
-function loadCfg(){
-  const h = new URLSearchParams(location.hash.slice(1));
-  if(h.get('bin') && h.get('read')){
-    const c = {bin:h.get('bin'), read:h.get('read')};
-    localStorage.setItem('wc_cfg', JSON.stringify(c));
-    return c;
-  }
-  try{ return JSON.parse(localStorage.getItem('wc_cfg')); }catch(e){ return null; }
-}
-function saveCfg(c){ CFG=c; localStorage.setItem('wc_cfg', JSON.stringify(c)); }
-
-const JB = 'https://api.jsonbin.io/v3/b/';
+// Общее хранилище — секретный Gist на GitHub.
+// Чтение: GitHub API (свежие данные, CORS *, лимит 60 запросов/час на IP — нам хватает,
+//   потому что опрос идёт только при загрузке страницы).
+// Запись: PATCH с GitHub-токеном (scope gist), который вводят в момент сохранения.
+const GIST_ID = "32109c7a568bd2fa783dff8db5fd67d6";
+const GIST_FILE = "results.json";
+const GIST_API = "https://api.github.com/gists/" + GIST_ID;
 
 async function pullResults(){
-  if(!CFG) return false;
   try{
-    const r = await fetch(JB + CFG.bin + '/latest', {
-      headers:{'X-Access-Key': CFG.read, 'X-Bin-Meta':'false'}
-    });
+    const r = await fetch(GIST_API, { headers:{'Accept':'application/vnd.github+json'} });
     if(!r.ok) return false;
     const j = await r.json();
-    RESULTS = (j && typeof j==='object' && !Array.isArray(j)) ? j : {};
+    const f = j.files && j.files[GIST_FILE];
+    let content = f ? f.content : '{}';
+    if(f && f.truncated && f.raw_url){ content = await (await fetch(f.raw_url)).text(); }
+    const parsed = content ? JSON.parse(content) : {};
+    RESULTS = (parsed && typeof parsed==='object' && !Array.isArray(parsed)) ? parsed : {};
     pruneInvalid();
     return true;
   }catch(e){ return false; }
 }
 
-async function pushResults(masterKey){
-  if(!CFG) throw new Error('Сначала подключите бин (кнопка «Синхронизация»).');
-  const r = await fetch(JB + CFG.bin, {
-    method:'PUT',
-    headers:{'Content-Type':'application/json','X-Master-Key':masterKey},
-    body: JSON.stringify(RESULTS)
+async function pushResults(token){
+  const r = await fetch(GIST_API, {
+    method:'PATCH',
+    headers:{'Authorization':'Bearer '+token, 'Accept':'application/vnd.github+json', 'Content-Type':'application/json'},
+    body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify(RESULTS) } } })
   });
   if(!r.ok){
-    if(r.status===401||r.status===403) throw new Error('Неверный master-ключ.');
+    if(r.status===401) throw new Error('Неверный токен.');
+    if(r.status===403||r.status===404) throw new Error('Токен без доступа к Gist (нужен scope gist).');
     throw new Error('Не удалось сохранить (код '+r.status+').');
   }
   return true;
@@ -898,8 +888,8 @@ function setDot(state){
 
 async function boot(){
   // Тянем общие результаты ОДИН раз — на загрузке страницы.
-  // Фонового опроса нет, чтобы оставаться в пределах бесплатного лимита JSONBin.
-  if(CFG){ online = await pullResults(); }
+  // Фонового опроса нет, чтобы оставаться в пределах лимита GitHub API (60/час на IP).
+  online = await pullResults();
   if(!online){
     const local = localStorage.getItem('wc_results');
     if(local){ try{ RESULTS = JSON.parse(local); pruneInvalid(); }catch(e){} }
@@ -912,12 +902,11 @@ async function boot(){
 function reflectMode(){
   setDot(online ? 'on' : 'off');
   document.getElementById('storageNote').textContent =
-    online ? 'Результаты общие — синхронизируются через JSONBin.'
-           : (CFG ? 'Бин недоступен — работаем локально.'
-                  : 'Локальный режим. Нажмите «Синхронизация», чтобы сделать результаты общими.');
+    online ? 'Результаты общие — хранятся в Gist на GitHub.'
+           : 'Не удалось загрузить общие результаты — работаем локально (только в этом браузере).';
   document.getElementById('modeHint').innerHTML =
-    online ? 'Отметьте победителя — он пройдёт дальше по сетке. Введите <b>ключ записи</b> и нажмите <b>Сохранить</b> — обновление увидят все при следующем открытии.'
-           : 'Отметьте победителя — он пройдёт дальше по сетке, таблица пересчитается сразу. Для общих результатов настройте синхронизацию.';
+    online ? 'Отметьте победителя — он пройдёт дальше по сетке. Чтобы сохранить для всех, вставьте <b>GitHub-токен</b> и нажмите <b>Сохранить</b> — обновление увидят все при следующем открытии.'
+           : 'Отметьте победителя — он пройдёт дальше по сетке, таблица пересчитается сразу. Общие результаты сейчас недоступны.';
 }
 
 // --- Сетка: команды, выходящие в матч (по фактическим результатам) ---
@@ -1072,11 +1061,10 @@ function buildStageSeg(){
 function render(){ renderBoard(); renderMatches(); }
 
 document.getElementById('saveBtn').onclick = async () => {
-  const key = document.getElementById('writeKey').value.trim();
-  if(!CFG){ openSetup(); return; }
-  if(!key){ toast('Введите ключ записи (master-ключ)', true); return; }
+  const token = document.getElementById('writeKey').value.trim();
+  if(!token){ toast('Вставьте GitHub-токен (scope gist)', true); openSetup(); return; }
   try{
-    await pushResults(key);
+    await pushResults(token);
     online = true; reflectMode();
     toast('Сохранено для всех');
   }catch(e){ toast(e.message, true); }
@@ -1084,12 +1072,10 @@ document.getElementById('saveBtn').onclick = async () => {
 
 const setupModal = document.getElementById('setupModal');
 function openSetup(){
-  document.getElementById('cfgBin').value = (CFG&&CFG.bin) || '';
-  document.getElementById('cfgRead').value = (CFG&&CFG.read) || '';
   document.getElementById('cfgState').textContent =
-    CFG ? (online?'Подключено и синхронизировано.':'Сохранено, но бин пока не читается.') : '';
+    online ? 'Общие результаты загружены ✓' : 'Общие результаты сейчас недоступны (работаем локально).';
   setupModal.hidden=false;
-  document.getElementById('cfgBin').focus();
+  document.getElementById('setupClose').focus();
 }
 function closeSetup(){ setupModal.hidden=true; document.getElementById('setupBtn').focus(); }
 document.getElementById('setupBtn').onclick = openSetup;
@@ -1097,23 +1083,8 @@ document.getElementById('setupClose').onclick = closeSetup;
 setupModal.addEventListener('click', e => { if(e.target.id==='setupModal') closeSetup(); });
 document.addEventListener('keydown', e => { if(e.key==='Escape' && !setupModal.hidden) closeSetup(); });
 
-document.getElementById('cfgSave').onclick = async () => {
-  const bin=document.getElementById('cfgBin').value.trim();
-  const read=document.getElementById('cfgRead').value.trim();
-  if(!bin||!read){ document.getElementById('cfgState').textContent='Заполните BIN ID и Access Key.'; return; }
-  saveCfg({bin,read});
-  document.getElementById('cfgState').textContent='Проверяю доступ…';
-  online = await pullResults();
-  reflectMode(); render();
-  document.getElementById('cfgState').textContent =
-    online ? '✓ Подключено. Результаты теперь общие.' : 'Не удалось прочитать бин — проверьте BIN ID и Access Key.';
-};
-
 document.getElementById('cfgShare').onclick = async () => {
-  const bin=document.getElementById('cfgBin').value.trim();
-  const read=document.getElementById('cfgRead').value.trim();
-  if(!bin||!read){ document.getElementById('cfgState').textContent='Сначала впишите BIN ID и Access Key.'; return; }
-  const url = location.origin + location.pathname + '#bin='+encodeURIComponent(bin)+'&read='+encodeURIComponent(read);
+  const url = location.origin + location.pathname;
   try{ await navigator.clipboard.writeText(url); document.getElementById('cfgState').textContent='Ссылка скопирована — отправьте её друзьям.'; }
   catch(e){ document.getElementById('cfgState').textContent=url; }
 };
