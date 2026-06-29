@@ -117,6 +117,9 @@
   .btn:hover{border-color:var(--gold);color:#fff}
   .btn.save{background:var(--grass);border-color:var(--grass);color:#fff}
   .btn.save:hover{filter:brightness(1.1)}
+  .btn.save.attention{animation:savepulse 1.4s ease-in-out infinite}
+  @keyframes savepulse{0%,100%{box-shadow:0 0 0 0 rgba(47,125,79,.6)}50%{box-shadow:0 0 0 6px rgba(47,125,79,0)}}
+  .dirty-tag{font-size:12px;font-weight:600;color:var(--gold);white-space:nowrap}
   .btn:disabled{opacity:.4;cursor:not-allowed}
   .hint{font-size:12px;color:var(--chalk-soft);width:100%}
   .hint b{color:var(--chalk)}
@@ -301,7 +304,8 @@
     <div class="admin">
       <span class="synced" id="syncDot" title="состояние синхронизации" role="status" aria-live="polite"></span>
       <button class="btn" id="setupBtn">Как вносить</button>
-      <input id="writeKey" type="password" placeholder="GitHub-токен (gist)" autocomplete="off" aria-label="GitHub-токен с правом gist для сохранения результатов" title="GitHub-токен (scope gist) — нужен только чтобы сохранять результаты, нигде не хранится">
+      <input id="writeKey" type="password" placeholder="GitHub-токен (gist)" autocomplete="off" aria-label="GitHub-токен с правом gist для сохранения результатов" title="GitHub-токен (scope gist) — нужен только чтобы сохранять результаты">
+      <span class="dirty-tag" id="dirtyTag" hidden>● не сохранено</span>
       <button class="btn save" id="saveBtn">Сохранить</button>
     </div>
     <p class="hint" id="modeHint"></p>
@@ -348,11 +352,13 @@
       <li>Вставьте его в поле <b>«GitHub-токен»</b>, выберите победителей и нажмите <b>Сохранить</b>.</li>
     </ol>
 
-    <p class="mtext small">Токен можно отозвать в любой момент в настройках GitHub.
-      Совет: используйте отдельный токен только со scope <code>gist</code>.</p>
+    <p class="mtext small">Токен сохраняется <b>в этом браузере</b> — повторно вводить его не нужно,
+      просто меняйте результаты и жмите «Сохранить». Кнопка ниже удалит его из браузера.
+      Отозвать токен полностью можно в настройках GitHub. Совет: используйте отдельный токен только со scope <code>gist</code>.</p>
 
     <div class="mrow">
       <button class="btn" id="cfgShare">Скопировать ссылку для всех</button>
+      <button class="btn" id="cfgForget">Забыть токен</button>
     </div>
     <p class="mtext small" id="cfgState"></p>
   </div>
@@ -913,6 +919,12 @@ DATA.rows.forEach(r => byId[r.id] = r);
 let RESULTS = {};
 let activeStage = "all";
 let online = false;
+let dirty = false;   // есть несохранённые изменения результатов
+
+function updateDirty(){
+  document.getElementById('dirtyTag').hidden = !dirty;
+  document.getElementById('saveBtn').classList.toggle('attention', dirty);
+}
 
 // Общее хранилище — секретный Gist на GitHub.
 // Чтение: GitHub API (свежие данные, CORS *, лимит 60 запросов/час на IP — нам хватает,
@@ -1124,7 +1136,8 @@ function renderMatches(){
       const id = sel.dataset.id;
       if(sel.value) RESULTS[id] = sel.value; else delete RESULTS[id];
       pruneInvalid();
-      if(!online) localStorage.setItem('wc_results', JSON.stringify(RESULTS));
+      if(online){ dirty = true; updateDirty(); }
+      else { localStorage.setItem('wc_results', JSON.stringify(RESULTS)); }
       render();
     };
   });
@@ -1226,12 +1239,22 @@ function render(){ renderBoard(); renderMatches(); renderPnav(); if(!document.ge
 document.getElementById('saveBtn').onclick = async () => {
   const token = document.getElementById('writeKey').value.trim();
   if(!token){ toast('Вставьте GitHub-токен (scope gist)', true); openSetup(); return; }
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true;
   try{
     await pushResults(token);
-    online = true; reflectMode();
+    localStorage.setItem('wc_token', token);   // запомнить токен в этом браузере
+    online = true; dirty = false; updateDirty(); reflectMode();
     toast('Сохранено для всех');
   }catch(e){ toast(e.message, true); }
+  finally{ btn.disabled = false; }
 };
+
+// Подставить сохранённый ранее токен, чтобы не вводить каждый раз.
+(function(){ const t = localStorage.getItem('wc_token'); if(t) document.getElementById('writeKey').value = t; })();
+
+// Предупредить, если уходишь с несохранёнными изменениями.
+window.addEventListener('beforeunload', e => { if(dirty){ e.preventDefault(); e.returnValue = ''; } });
 
 const setupModal = document.getElementById('setupModal');
 function openSetup(){
@@ -1250,6 +1273,12 @@ document.getElementById('cfgShare').onclick = async () => {
   const url = location.origin + location.pathname;
   try{ await navigator.clipboard.writeText(url); document.getElementById('cfgState').textContent='Ссылка скопирована — отправьте её друзьям.'; }
   catch(e){ document.getElementById('cfgState').textContent=url; }
+};
+
+document.getElementById('cfgForget').onclick = () => {
+  localStorage.removeItem('wc_token');
+  document.getElementById('writeKey').value = '';
+  document.getElementById('cfgState').textContent = 'Токен удалён из этого браузера.';
 };
 
 let toastT;

@@ -211,6 +211,23 @@ backOk ? pass('back link returns to main view') : fail('back link did not return
 const pnav = await page.$$eval('#pnav a', a => a.length);
 pnav === 7 ? pass('player nav has 7 links') : fail(`pnav ${pnav} != 7`);
 
+// 10) Unsaved-changes indicator (online): changing a result via dropdown marks dirty
+await page.goto(file, { waitUntil: 'networkidle' }); // fresh load (online via gist)
+await page.waitForTimeout(120);
+const dirtyBefore = await page.evaluate(() => ({
+  hidden: document.getElementById('dirtyTag').hidden,
+  attention: document.getElementById('saveBtn').classList.contains('attention'),
+}));
+(dirtyBefore.hidden && !dirtyBefore.attention) ? pass('no "unsaved" indicator before edits') : fail('dirty indicator shown prematurely');
+await setWinner('R16-1', 'Парагвай');
+await page.waitForTimeout(80);
+const dirtyAfter = await page.evaluate(() => ({
+  hidden: document.getElementById('dirtyTag').hidden,
+  attention: document.getElementById('saveBtn').classList.contains('attention'),
+  tag: document.getElementById('dirtyTag').textContent.trim(),
+}));
+(!dirtyAfter.hidden && dirtyAfter.attention) ? pass('"unsaved" indicator + pulsing Save appear after an online edit') : fail(`dirty indicator not shown: ${JSON.stringify(dirtyAfter)}`);
+
 console.log('CONSOLE ERRORS:', consoleErrors.length ? consoleErrors : 'none');
 if (consoleErrors.length) fail('console errors present');
 
