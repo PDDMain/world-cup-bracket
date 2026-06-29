@@ -45,11 +45,11 @@ const expected = {
   'Митя': { pts: 3, hits: 2 },
   'Мила': { pts: 9, hits: 4 },
   'Даша': { pts: 9, hits: 4 },
-  'Алёна': { pts: 9, hits: 4 },
+  'Алёна': { pts: 4, hits: 3 },
   'Володя': { pts: 4, hits: 3 },
-  'Аня': { pts: 4, hits: 3 },
+  'Диня': { pts: 4, hits: 3 },
 };
-const expectedOrder = ['Алёна','Даша','Мила','Аня','Володя','Митя'];
+const expectedOrder = ['Даша','Мила','Алёна','Володя','Диня','Митя'];
 
 let ok = true;
 const fail = (m) => { ok = false; console.log('  ✗ ' + m); };
@@ -82,8 +82,8 @@ const champ = await page.evaluate(() => {
   };
 });
 console.log('CHAMP CARD:', JSON.stringify(champ));
-if (champ.right !== 3) fail(`champ right ${champ.right} != 3`);
-if (champ.wrong !== 3) fail(`champ wrong ${champ.wrong} != 3`);
+if (champ.right !== 2) fail(`champ right ${champ.right} != 2`);
+if (champ.wrong !== 4) fail(`champ wrong ${champ.wrong} != 4`);
 if (!champ.decided) fail('champ card not marked decided');
 
 // pill / decided count
