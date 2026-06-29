@@ -160,6 +160,57 @@ const champRight = await page.evaluate(() => {
 });
 champRight ? pass('Денис FINAL pick (Аргентина) highlighted correct') : fail('Денис FINAL pick not highlighted');
 
+// 9) Player subpages — set a clean scenario then open Денис's bracket page
+await page.evaluate(() => { RESULTS = {}; render(); });
+// Денис: R16-9 pick = Япония. Set actual Бразилия (он не угадал) and R16-13 Аргентина (угадал).
+await setWinner('R16-9', 'Бразилия');
+await setWinner('R16-13', 'Аргентина');
+await page.waitForTimeout(80);
+// navigate via leaderboard name link → hash route
+await page.goto(file + '#p=' + encodeURIComponent('Денис'), { waitUntil: 'networkidle' });
+await page.waitForTimeout(120);
+const pv = await page.evaluate(() => {
+  const view = document.getElementById('playerView');
+  const main = document.getElementById('mainView');
+  const chip = (id) => { // find chip by matching meta/team within bracket for a given row id via index
+    return null;
+  };
+  // collect chips by class
+  const all = [...document.querySelectorAll('#playerBracket .bchip')];
+  return {
+    playerShown: !view.hidden && main.hidden,
+    head: document.getElementById('playerHead').textContent.replace(/\s+/g,' ').trim(),
+    correct: document.querySelectorAll('#playerBracket .bchip.correct, #playerThird .bchip.correct').length,
+    wrong: document.querySelectorAll('#playerBracket .bchip.wrong, #playerThird .bchip.wrong').length,
+    unknown: document.querySelectorAll('#playerBracket .bchip.unknown, #playerThird .bchip.unknown').length,
+    cols: document.querySelectorAll('#playerBracket .bcol').length,
+    totalChips: all.length + document.querySelectorAll('#playerThird .bchip').length,
+  };
+});
+console.log('PLAYER VIEW:', JSON.stringify(pv));
+pv.playerShown ? pass('player view shown, main hidden on #p= route') : fail('player route did not switch view');
+pv.cols === 5 ? pass('5 bracket columns (1/16..Финал)') : fail(`cols ${pv.cols} != 5`);
+pv.totalChips === 32 ? pass('32 chips (16+8+4+2+1 bracket + 1 bronze)') : fail(`chips ${pv.totalChips} != 32`);
+pv.head.includes('Денис') ? pass('player head shows name') : fail('no name in head');
+// Денис correct = R16-13 (1). wrong = R16-9 (he picked Япония, actual Бразилия) (1). rest unknown.
+(pv.correct === 1) ? pass('exactly 1 green (correct) chip') : fail(`correct ${pv.correct} != 1`);
+(pv.wrong === 1) ? pass('exactly 1 red (wrong) chip') : fail(`wrong ${pv.wrong} != 1`);
+(pv.unknown === 30) ? pass('30 grey (unknown) chips') : fail(`unknown ${pv.unknown} != 30`);
+// the wrong chip should expose the actual result (факт)
+const fact = await page.evaluate(() => {
+  const w = document.querySelector('#playerBracket .bchip.wrong');
+  return { team: w.querySelector('.tn').textContent.trim(), fact: (w.querySelector('.fact')||{}).textContent || '' };
+});
+(fact.team === 'Япония' && fact.fact.includes('Бразилия')) ? pass('wrong chip shows pick + факт: actual') : fail(`wrong chip ${JSON.stringify(fact)}`);
+// back link returns to main
+await page.click('#pback');
+await page.waitForTimeout(80);
+const backOk = await page.evaluate(() => !document.getElementById('mainView').hidden && document.getElementById('playerView').hidden);
+backOk ? pass('back link returns to main view') : fail('back link did not return to main');
+// pnav has 7 player links
+const pnav = await page.$$eval('#pnav a', a => a.length);
+pnav === 7 ? pass('player nav has 7 links') : fail(`pnav ${pnav} != 7`);
+
 console.log('CONSOLE ERRORS:', consoleErrors.length ? consoleErrors : 'none');
 if (consoleErrors.length) fail('console errors present');
 

@@ -78,7 +78,8 @@
   }
   .lrow .rank{font-family:"Oswald",sans-serif;font-size:20px;color:var(--chalk-soft);text-align:center}
   .lrow .who{display:flex;align-items:center;gap:10px;min-width:0}
-  .lrow .who .name{font-weight:600;font-size:17px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lrow .who .name{font-weight:600;font-size:17px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:none;border-bottom:1px dotted transparent}
+  .lrow .who a.name:hover{color:var(--gold);border-bottom-color:var(--gold)}
   .lrow .who .champ{font-size:12px;color:var(--chalk-soft);white-space:nowrap}
   .lrow .who .champ b{color:var(--gold);font-weight:600}
   .lrow .bar{height:8px;border-radius:6px;background:var(--line);width:min(34vw,260px);overflow:hidden}
@@ -211,6 +212,61 @@
   .sheet .btn{border-color:#cbbf9f}
   .sheet .btn:hover{border-color:var(--grass);color:var(--ink)}
 
+  /* ---------- Навигация по участникам ---------- */
+  .pnav{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+  .pnav a{
+    display:inline-flex;align-items:center;gap:7px;text-decoration:none;
+    background:var(--night-2);border:1px solid var(--line);border-radius:99px;
+    color:var(--chalk);font-size:13px;font-weight:600;padding:7px 13px;transition:.18s;
+  }
+  .pnav a:hover{border-color:var(--gold);color:#fff}
+  .pnav a .mini{font-family:"Oswald",sans-serif;color:var(--gold);font-size:13px}
+
+  /* ---------- Страница участника ---------- */
+  .pback{display:inline-flex;align-items:center;gap:7px;text-decoration:none;color:var(--chalk-soft);
+    font-size:13px;font-weight:600;margin-bottom:14px}
+  .pback:hover{color:var(--gold)}
+  .phead{display:flex;flex-wrap:wrap;align-items:center;gap:14px 22px;margin-bottom:8px}
+  .phead h2{font-family:"Oswald",sans-serif;text-transform:uppercase;letter-spacing:.5px;
+    font-size:clamp(22px,4vw,34px);color:#fff}
+  .phead .pstat{font-size:13px;color:var(--chalk-soft)}
+  .phead .pstat b{color:#fff;font-family:"Oswald",sans-serif;font-size:18px}
+  .phead .pchamp b{color:var(--gold)}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin:6px 0 22px;font-size:12px;color:var(--chalk-soft)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+  .legend .lc{background:rgba(47,125,79,.55);border:1px solid var(--grass)}
+  .legend .lw{background:rgba(224,69,43,.45);border:1px solid var(--hit)}
+  .legend .lu{background:var(--night-2);border:1px solid var(--line)}
+
+  .bracket{display:flex;gap:14px;overflow-x:auto;padding-bottom:10px;align-items:stretch}
+  .bcol{display:flex;flex-direction:column;min-width:148px;flex:1}
+  .bcol .rlabel{font-family:"Oswald",sans-serif;text-transform:uppercase;letter-spacing:1.5px;
+    font-size:11px;color:var(--chalk-soft);text-align:center;margin-bottom:10px}
+  .bcol .col-body{flex:1;display:flex;flex-direction:column;justify-content:space-around;gap:8px}
+  .bchip{
+    background:var(--night-2);border:1px solid var(--line);border-left-width:4px;border-radius:9px;
+    padding:8px 11px;min-height:48px;display:flex;flex-direction:column;justify-content:center;gap:2px;
+  }
+  .bchip .team{font-weight:700;font-size:14px;color:#fff;display:flex;align-items:center;gap:6px}
+  .bchip .meta{font-size:10.5px;color:var(--chalk-soft);letter-spacing:.2px}
+  .bchip .mark{margin-left:auto;font-size:12px;font-weight:700}
+  .bchip.correct{border-color:var(--grass);border-left-color:var(--grass);background:linear-gradient(90deg,rgba(47,125,79,.22),var(--night-2) 70%)}
+  .bchip.correct .mark{color:#5fd08a}
+  .bchip.wrong{border-color:var(--hit);border-left-color:var(--hit);background:linear-gradient(90deg,rgba(224,69,43,.18),var(--night-2) 70%)}
+  .bchip.wrong .team{color:#f0a08e}
+  .bchip.wrong .team .tn{text-decoration:line-through;text-decoration-color:rgba(240,160,142,.6)}
+  .bchip.wrong .mark{color:var(--hit)}
+  .bchip.unknown{opacity:.85}
+  .bchip.unknown .team{color:var(--chalk)}
+  .bchip .fact{font-size:10.5px;color:#5fd08a;font-weight:600}
+  .pthird{margin-top:26px}
+  .pthird .bchip{max-width:280px}
+  @media(max-width:640px){
+    .bcol{min-width:130px}
+    .bracket{gap:10px}
+  }
+
   @media (prefers-reduced-motion:reduce){
     *{transition:none!important;animation:none!important;scroll-behavior:auto!important}
   }
@@ -228,6 +284,9 @@
     </div>
     <div class="pill">Сыграно матчей <b id="pillDecided">0</b> / <span id="pillTotal">0</span></div>
   </header>
+
+  <div id="mainView">
+  <nav class="pnav" id="pnav" aria-label="Сетки участников"></nav>
 
   <section class="board" aria-label="Турнирная таблица">
     <div class="board-head">
@@ -249,6 +308,19 @@
   </div>
 
   <div id="matchArea"></div>
+  </div><!-- /mainView -->
+
+  <section id="playerView" hidden aria-label="Сетка участника">
+    <a class="pback" href="#" id="pback">← ко всем участникам</a>
+    <div class="phead" id="playerHead"></div>
+    <div class="legend">
+      <span><i class="lc"></i> угадал</span>
+      <span><i class="lw"></i> не угадал</span>
+      <span><i class="lu"></i> ещё не сыграно</span>
+    </div>
+    <div class="bracket" id="playerBracket"></div>
+    <div class="pthird" id="playerThird"></div>
+  </section>
 
   <footer>
     <span>Очки: 1/16 — 1 балл · 1/8 — 1 · 1/4 — 2 · 1/2 — 3 · финал — 5 · 3-е место — 2.</span>
@@ -912,6 +984,7 @@ async function boot(){
   reflectMode();
   buildStageSeg();
   render();
+  route();
 }
 
 function reflectMode(){
@@ -986,7 +1059,7 @@ function renderBoard(){
       ? `<span class="champ">чемпион: <b>${s.champ}</b></span>` : '';
     return `<div class="lrow ${lead?'lead':''}" data-n="${n}">
       <div class="rank">${i+1}</div>
-      <div class="who"><span class="name">${n}</span>${champ}</div>
+      <div class="who"><a class="name" href="#p=${encodeURIComponent(n)}" title="Открыть сетку: ${esc(n)}">${esc(n)}</a>${champ}</div>
       <div class="bar"><i style="width:${Math.round(s.pts/max*100)}%"></i></div>
       <div class="pts">${s.pts}<small>${s.hits} угад.</small></div>
     </div>`;
@@ -1073,7 +1146,82 @@ function buildStageSeg(){
   });
 }
 
-function render(){ renderBoard(); renderMatches(); }
+function renderPnav(){
+  const tbl = scores();
+  const ranked = [...DATA.names].sort((a,b) =>
+    tbl[b].pts-tbl[a].pts || tbl[b].hits-tbl[a].hits || a.localeCompare(b,'ru'));
+  document.getElementById('pnav').innerHTML = ranked.map(n =>
+    `<a href="#p=${encodeURIComponent(n)}">${esc(n)} <span class="mini">${tbl[n].pts}</span></a>`).join('');
+}
+
+const BRACKET_ROUNDS = ["1/16","1/8","1/4","1/2","Финал"];
+
+function chipStatus(row, name){
+  const pick = row.preds[name] || "—";
+  const actual = RESULTS[row.id] || "";
+  if(!actual || pick === "—") return {st:'unknown', pick, actual};
+  return {st: pick===actual ? 'correct' : 'wrong', pick, actual};
+}
+
+function bchip(row, name, opts={}){
+  const {st, pick, actual} = chipStatus(row, name);
+  const teams = fixtureTeams(row);
+  let meta = '';
+  if(row.stage === "1/16"){
+    meta = `${esc(row.a)} – ${esc(row.b)}` + (row.date ? ` · ${esc(row.date)}` : '');
+  }else if(teams[0] && teams[1]){
+    meta = `${esc(teams[0])} – ${esc(teams[1])}`;
+  }else{
+    meta = 'победитель пары';
+  }
+  const trophy = opts.champ ? '🏆 ' : '';
+  const mark = st==='correct' ? '✓' : (st==='wrong' ? '✗' : '');
+  const fact = st==='wrong' ? `<span class="fact">факт: ${esc(actual)}</span>` : '';
+  return `<div class="bchip ${st}">
+    <div class="team">${trophy}<span class="tn">${esc(pick)}</span><span class="mark">${mark}</span></div>
+    <div class="meta">${meta}</div>
+    ${fact}
+  </div>`;
+}
+
+function renderPlayer(name){
+  const tbl = scores();
+  const s = tbl[name];
+  const ranked = [...DATA.names].sort((a,b) =>
+    tbl[b].pts-tbl[a].pts || tbl[b].hits-tbl[a].hits || a.localeCompare(b,'ru'));
+  const rank = ranked.indexOf(name) + 1;
+  const champRow = byId["FINAL"];
+  const champ = s.champ && s.champ!=="—" ? `<span class="pstat pchamp">чемпион: <b>${esc(s.champ)}</b></span>` : '';
+  document.getElementById('playerHead').innerHTML = `
+    <h2>${esc(name)}</h2>
+    <span class="pstat">место <b>${rank}</b></span>
+    <span class="pstat"><b>${s.pts}</b> очков</span>
+    <span class="pstat"><b>${s.hits}</b> угадано из ${DATA.rows.length}</span>
+    ${champ}`;
+
+  document.getElementById('playerBracket').innerHTML = BRACKET_ROUNDS.map(stage => {
+    const rows = DATA.rows.filter(r => r.stage===stage);
+    const body = rows.map(r => bchip(r, name, {champ: stage==="Финал"})).join('');
+    return `<div class="bcol"><div class="rlabel">${STAGE_TITLES[stage]}</div><div class="col-body">${body}</div></div>`;
+  }).join('');
+
+  const bronze = byId["BRONZE"];
+  document.getElementById('playerThird').innerHTML =
+    `<div class="rlabel" style="text-align:left;margin-bottom:10px">${STAGE_TITLES["3 место"]}</div>` +
+    bchip(bronze, name);
+}
+
+function route(){
+  let name = '';
+  if(location.hash.startsWith('#p=')) { try{ name = decodeURIComponent(location.hash.slice(3)); }catch(e){} }
+  const isPlayer = name && DATA.names.includes(name);
+  document.getElementById('mainView').hidden = isPlayer;
+  document.getElementById('playerView').hidden = !isPlayer;
+  if(isPlayer){ renderPlayer(name); window.scrollTo(0,0); }
+}
+window.addEventListener('hashchange', route);
+
+function render(){ renderBoard(); renderMatches(); renderPnav(); if(!document.getElementById('playerView').hidden){ const n=decodeURIComponent(location.hash.slice(3)); if(DATA.names.includes(n)) renderPlayer(n); } }
 
 document.getElementById('saveBtn').onclick = async () => {
   const token = document.getElementById('writeKey').value.trim();
