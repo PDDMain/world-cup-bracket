@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Турнирная сетка — кто угадает</title>
+<style>
+  :root{
+    --night:#0e1b2c;        /* фон-стадион ночью */
+    --night-2:#142539;
+    --paper:#f4efe3;        /* бумага бланка */
+    --paper-line:#d9cfb8;
+    --ink:#1d2733;          /* текст на бумаге */
+    --ink-soft:#5d6470;
+    --hit:#e0452b;          /* вермильон — угадано */
+    --hit-soft:#fbe6df;
+    --gold:#e8b84b;         /* лидер */
+    --grass:#2f7d4f;
+    --line:#26384f;
+    --chalk:#cdd9e8;        /* текст на тёмном */
+    --chalk-soft:#7d8ea3;
+    --focus:#79b8ff;        /* видимый фокус с клавиатуры */
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    font-family:"Inter","Segoe UI",system-ui,sans-serif;
+    background:
+      radial-gradient(1200px 600px at 50% -10%, #1b3047 0%, transparent 60%),
+      var(--night);
+    color:var(--chalk);
+    min-height:100vh;
+    line-height:1.45;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:clamp(18px,4vw,40px)}
+
+  /* видимый фокус с клавиатуры */
+  a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible{
+    outline:3px solid var(--focus);
+    outline-offset:2px;
+    border-radius:6px;
+  }
+
+  /* ---------- Шапка ---------- */
+  header.hero{
+    display:flex;flex-wrap:wrap;align-items:flex-end;gap:16px;
+    justify-content:space-between;
+    padding-bottom:22px;margin-bottom:26px;
+    border-bottom:1px solid var(--line);
+  }
+  .hero h1{
+    font-family:"Oswald","Inter",sans-serif;
+    font-weight:600;letter-spacing:.5px;text-transform:uppercase;
+    font-size:clamp(26px,5vw,46px);line-height:.98;color:#fff;
+  }
+  .hero h1 span{color:var(--gold)}
+  .hero .sub{color:var(--chalk-soft);font-size:14px;margin-top:6px;max-width:46ch}
+  .pill{
+    display:inline-flex;align-items:center;gap:8px;
+    background:var(--night-2);border:1px solid var(--line);
+    color:var(--chalk-soft);font-size:12px;letter-spacing:.4px;
+    text-transform:uppercase;padding:7px 13px;border-radius:99px;
+  }
+  .pill b{color:var(--gold);font-weight:600}
+
+  /* ---------- Подиум / лидерборд ---------- */
+  .board{margin-bottom:34px}
+  .board-head{display:flex;align-items:baseline;gap:12px;margin-bottom:14px}
+  .board-head h2{font-family:"Oswald",sans-serif;font-weight:500;text-transform:uppercase;
+    letter-spacing:1px;font-size:15px;color:var(--chalk-soft)}
+  .board-head .decided{font-size:12px;color:var(--chalk-soft)}
+  .lboard{display:flex;flex-direction:column;gap:8px}
+  .lrow{
+    position:relative;display:grid;
+    grid-template-columns:34px 1fr auto auto;align-items:center;gap:14px;
+    background:var(--night-2);
+    border:1px solid var(--line);border-radius:12px;
+    padding:12px 16px;
+    transition:transform .55s cubic-bezier(.2,.8,.2,1),border-color .3s,background .3s;
+  }
+  .lrow .rank{font-family:"Oswald",sans-serif;font-size:20px;color:var(--chalk-soft);text-align:center}
+  .lrow .who{display:flex;align-items:center;gap:10px;min-width:0}
+  .lrow .who .name{font-weight:600;font-size:17px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lrow .who .champ{font-size:12px;color:var(--chalk-soft);white-space:nowrap}
+  .lrow .who .champ b{color:var(--gold);font-weight:600}
+  .lrow .bar{height:8px;border-radius:6px;background:var(--line);width:min(34vw,260px);overflow:hidden}
+  .lrow .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--hit),#f08a4b);transition:width .6s cubic-bezier(.2,.8,.2,1)}
+  .lrow .pts{font-family:"Oswald",sans-serif;font-size:24px;color:#fff;min-width:46px;text-align:right}
+  .lrow .pts small{display:block;font-family:Inter;font-size:10px;letter-spacing:.5px;color:var(--chalk-soft);text-transform:uppercase}
+  .lrow.lead{border-color:var(--gold);background:linear-gradient(90deg,rgba(232,184,75,.12),var(--night-2) 60%)}
+  .lrow.lead .rank{color:var(--gold)}
+  @media(max-width:640px){
+    .lrow{grid-template-columns:28px 1fr auto;gap:10px;padding:11px 13px}
+    .lrow .bar{display:none}
+    .lrow .who .champ{display:none}
+  }
+
+  /* ---------- Управление ---------- */
+  .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:26px}
+  .seg{display:flex;background:var(--night-2);border:1px solid var(--line);border-radius:10px;padding:4px;gap:2px;flex-wrap:wrap}
+  .seg button{
+    border:0;background:transparent;color:var(--chalk-soft);
+    font-family:Inter;font-size:13px;font-weight:500;cursor:pointer;
+    padding:7px 13px;border-radius:7px;transition:.18s;white-space:nowrap;
+  }
+  .seg button:hover{color:var(--chalk)}
+  .seg button.on{background:var(--hit);color:#fff}
+  .admin{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .admin input{
+    background:var(--night-2);border:1px solid var(--line);color:var(--chalk);
+    padding:8px 11px;border-radius:8px;font-size:13px;width:140px;font-family:Inter;
+  }
+  .admin input:focus{outline:none;border-color:var(--gold)}
+  .btn{
+    border:1px solid var(--line);background:var(--night-2);color:var(--chalk);
+    padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;
+    font-family:Inter;transition:.18s;
+  }
+  .btn:hover{border-color:var(--gold);color:#fff}
+  .btn.save{background:var(--grass);border-color:var(--grass);color:#fff}
+  .btn.save:hover{filter:brightness(1.1)}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .hint{font-size:12px;color:var(--chalk-soft);width:100%}
+  .hint b{color:var(--chalk)}
+
+  /* ---------- Матчи (бумажные карточки) ---------- */
+  .stage-label{
+    font-family:"Oswald",sans-serif;text-transform:uppercase;letter-spacing:2px;
+    font-size:13px;color:var(--chalk-soft);margin:30px 0 14px;
+    display:flex;align-items:center;gap:12px;
+  }
+  .stage-label::after{content:"";flex:1;height:1px;background:var(--line)}
+  .matches{display:grid;gap:14px}
+  .match{
+    background:var(--paper);color:var(--ink);
+    border-radius:12px;overflow:hidden;
+    box-shadow:0 10px 26px -14px rgba(0,0,0,.6);
+    position:relative;
+  }
+  .match::before{ /* поле для дырокола, как в подшитом бланке */
+    content:"";position:absolute;left:14px;top:14px;width:9px;height:9px;border-radius:50%;
+    background:radial-gradient(circle at 35% 35%,#fff,#cdbf9f);box-shadow:0 22px 0 #cdbf9f;
+    opacity:.7;
+  }
+  .match .top{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:13px 16px 11px 38px;border-bottom:1px dashed var(--paper-line);
+  }
+  .match .fixture{font-weight:700;font-size:15px}
+  .match .fixture .vs{color:var(--ink-soft);font-weight:500;margin:0 6px;font-size:13px}
+  .match .actual{display:flex;align-items:center;gap:8px}
+  .match .actual label{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--ink-soft)}
+  .match .actual select{
+    font-family:Inter;font-size:13px;font-weight:600;color:var(--ink);
+    background:#fff;border:1px solid var(--paper-line);border-radius:7px;
+    padding:6px 9px;cursor:pointer;min-width:120px;
+  }
+  .match .actual select:disabled{background:#ece5d4;cursor:default;color:var(--ink)}
+  .match.decided .actual select{border-color:var(--grass);color:var(--grass)}
+  .match .picks{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+    gap:1px;background:var(--paper-line);
+  }
+  .pick{background:var(--paper);padding:9px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .pick .pname{font-size:12px;color:var(--ink-soft);font-weight:600}
+  .pick .pteam{font-size:13px;font-weight:500}
+  .pick.right{background:var(--hit-soft)}
+  .pick.right .pteam{color:var(--hit);font-weight:700}
+  .pick.right .pname{color:var(--hit)}
+  .pick .tick{font-size:11px;opacity:0;transition:.2s;color:var(--hit);font-weight:700}
+  .pick.right .tick{opacity:1}
+  .pick.wrong .pteam{color:var(--ink-soft);text-decoration:line-through;text-decoration-color:#c9bfa8}
+
+  footer{margin-top:40px;padding-top:20px;border-top:1px solid var(--line);
+    color:var(--chalk-soft);font-size:12px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .toast{
+    position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);
+    background:var(--grass);color:#fff;padding:11px 20px;border-radius:10px;
+    font-size:14px;font-weight:600;opacity:0;pointer-events:none;transition:.3s;z-index:50;
+    box-shadow:0 12px 30px -8px rgba(0,0,0,.5);
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast.err{background:var(--hit)}
+
+  .synced{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--chalk-soft);
+    box-shadow:0 0 0 0 transparent;transition:.3s}
+  .synced.on{background:var(--grass);box-shadow:0 0 8px 1px rgba(47,125,79,.7)}
+  .synced.off{background:var(--chalk-soft)}
+
+  .modal{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;
+    background:rgba(6,12,20,.72);backdrop-filter:blur(3px);padding:18px}
+  .modal[hidden]{display:none}
+  .sheet{position:relative;background:var(--paper);color:var(--ink);border-radius:16px;
+    max-width:520px;width:100%;padding:26px clamp(18px,4vw,30px);
+    box-shadow:0 24px 60px -16px rgba(0,0,0,.7);max-height:90vh;overflow:auto}
+  .sheet h3{font-family:"Oswald",sans-serif;text-transform:uppercase;letter-spacing:1px;
+    font-size:20px;margin-bottom:10px}
+  .sheet .x{position:absolute;top:14px;right:16px;border:0;background:transparent;
+    font-size:18px;cursor:pointer;color:var(--ink-soft)}
+  .mtext{font-size:14px;color:var(--ink);margin-bottom:14px;line-height:1.5}
+  .mtext.small{font-size:12.5px;color:var(--ink-soft)}
+  .steps{margin:0 0 16px 18px;font-size:13.5px;line-height:1.7}
+  .steps code{background:#e7dfcc;padding:1px 6px;border-radius:5px;font-size:12px}
+  .steps a{color:var(--hit);font-weight:600}
+  .fld{display:block;margin-bottom:12px}
+  .fld span{display:block;font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;
+    color:var(--ink-soft);margin-bottom:5px}
+  .fld input{width:100%;background:#fff;border:1px solid var(--paper-line);border-radius:8px;
+    padding:9px 11px;font-size:13px;font-family:Inter;color:var(--ink)}
+  .fld input:focus{outline:none;border-color:var(--grass)}
+  .mrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+  .sheet .btn{border-color:#cbbf9f}
+  .sheet .btn:hover{border-color:var(--grass);color:var(--ink)}
+
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none!important;animation:none!important;scroll-behavior:auto!important}
+  }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div>
+      <h1>Кто угадает <span>сетку</span></h1>
+      <p class="sub">Шесть бланков, один турнир. Отмечайте реальных победителей — таблица очков пересчитывается сама, а угаданные ставки подсвечиваются.</p>
+    </div>
+    <div class="pill">Решено матчей <b id="pillDecided">0</b> / <span id="pillTotal">0</span></div>
+  </header>
+
+  <section class="board" aria-label="Турнирная таблица">
+    <div class="board-head">
+      <h2>Турнирная таблица</h2>
+      <span class="decided" id="boardNote">очки начисляются по мере ввода результатов</span>
+    </div>
+    <div class="lboard" id="lboard"></div>
+  </section>
+
+  <div class="controls">
+    <div class="seg" id="stageSeg" role="tablist" aria-label="Фильтр по стадии"></div>
+    <div class="admin">
+      <span class="synced" id="syncDot" title="состояние синхронизации" role="status" aria-live="polite"></span>
+      <button class="btn" id="setupBtn">Синхронизация</button>
+      <input id="writeKey" type="password" placeholder="ключ записи" autocomplete="off" aria-label="Master-ключ JSONBin для сохранения результатов" title="Master-ключ JSONBin — нужен только чтобы сохранять результаты">
+      <button class="btn save" id="saveBtn">Сохранить</button>
+    </div>
+    <p class="hint" id="modeHint"></p>
+  </div>
+
+  <div id="matchArea"></div>
+
+  <footer>
+    <span>Очки: 1/8 — 1 балл · 1/4 — 2 · 1/2 — 3 · финал — 5 · 3-е место — 2.</span>
+    <span id="storageNote"></span>
+  </footer>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<div class="modal" id="setupModal" hidden role="dialog" aria-modal="true" aria-labelledby="setupTitle">
+  <div class="sheet">
+    <button class="x" id="setupClose" aria-label="Закрыть">✕</button>
+    <h3 id="setupTitle">Общая синхронизация</h3>
+    <p class="mtext">Чтобы все видели одни и те же результаты, приложение хранит их
+      в бесплатном «бине» на JSONBin.io. Настройка займёт минуту — её делает один человек,
+      остальным достаточно открыть ссылку.</p>
+
+    <ol class="steps">
+      <li>Зарегистрируйтесь на <a href="https://jsonbin.io" target="_blank" rel="noopener">jsonbin.io</a> (бесплатно).</li>
+      <li>Создайте новый <b>Bin</b> с содержимым <code>{}</code> и скопируйте его <b>BIN ID</b>
+        (из адресной строки или раздела API).</li>
+      <li>В разделе <b>API Keys</b> скопируйте <b>Master Key</b>
+        и создайте <b>Access Key</b> (только чтение).</li>
+    </ol>
+
+    <label class="fld"><span>BIN ID</span>
+      <input id="cfgBin" placeholder="напр. 66f0a1b2ac...">
+    </label>
+    <label class="fld"><span>Access Key (только чтение — попадёт в ссылку для всех)</span>
+      <input id="cfgRead" placeholder="$2a$10$... read-only">
+    </label>
+
+    <p class="mtext small">Master-ключ <b>нигде не сохраняется</b> в файле — вы вводите его
+      каждый раз, когда сохраняете результат. Так его не увидят те, кому вы дали ссылку.</p>
+
+    <div class="mrow">
+      <button class="btn save" id="cfgSave">Подключить</button>
+      <button class="btn" id="cfgShare">Скопировать ссылку для всех</button>
+    </div>
+    <p class="mtext small" id="cfgState"></p>
+  </div>
+</div>
+
+<script>
+const DATA = {"names": ["Митя", "Мила", "Даша", "Алёна", "Володя", "Аня"], "rows": [{"stage": "1/8", "slot": "1: Германия vs Франция", "preds": {"Митя": "Германия", "Мила": "Германия", "Даша": "Германия", "Алёна": "Германия", "Володя": "Германия", "Аня": "Германия"}}, {"stage": "1/8", "slot": "2: ЮАР vs Нидерланды", "preds": {"Митя": "Франция", "Мила": "Канада", "Даша": "Канада", "Алёна": "Канада", "Володя": "Канада", "Аня": "Канада"}}, {"stage": "1/8", "slot": "3: Португалия vs Испания", "preds": {"Митя": "Канада", "Мила": "Португалия", "Даша": "Португалия", "Алёна": "Хорватия", "Володя": "Хорватия", "Аня": "Хорватия"}}, {"stage": "1/8", "slot": "4: США vs Бельгия", "preds": {"Митя": "Нидерланды", "Мила": "США", "Даша": "США", "Алёна": "США", "Володя": "США", "Аня": "США"}}, {"stage": "1/8", "slot": "5: Бразилия vs Кот-д.Ивуар", "preds": {"Митя": "Португалия", "Мила": "Бразилия", "Даша": "Бразилия", "Алёна": "Бразилия", "Володя": "Бразилия", "Аня": "Бразилия"}}, {"stage": "1/8", "slot": "6: Мексика vs Англия", "preds": {"Митя": "США", "Мила": "Мексика", "Даша": "Мексика", "Алёна": "Мексика", "Володя": "Эквадор", "Аня": "Мексика"}}, {"stage": "1/8", "slot": "7: Аргентина vs Австралия", "preds": {"Митя": "Япония", "Мила": "Аргентина", "Даша": "Аргентина", "Алёна": "Аргентина", "Володя": "Аргентина", "Аня": "Аргентина"}}, {"stage": "1/8", "slot": "8: Швейцария vs Колумбия", "preds": {"Митя": "Мексика", "Мила": "Алжир", "Даша": "Швейцария", "Алёна": "Швейцария", "Володя": "Швейцария", "Аня": "Швейцария"}}, {"stage": "1/4", "slot": "Четвертьфинал 1", "preds": {"Митя": "Франция", "Мила": "Франция", "Даша": "Франция", "Алёна": "Германия", "Володя": "Франция", "Аня": "Франция"}}, {"stage": "1/4", "slot": "Четвертьфинал 2", "preds": {"Митя": "Испания", "Мила": "Испания", "Даша": "Испания", "Алёна": "Испания", "Володя": "Испания", "Аня": "Испания"}}, {"stage": "1/4", "slot": "Четвертьфинал 3", "preds": {"Митя": "Япония", "Мила": "Бразилия", "Даша": "Бразилия", "Алёна": "Бразилия", "Володя": "Бразилия", "Аня": "Бразилия"}}, {"stage": "1/4", "slot": "Четвертьфинал 4", "preds": {"Митя": "Аргентина", "Мила": "Аргентина", "Даша": "Аргентина", "Алёна": "Аргентина", "Володя": "Аргентина", "Аня": "Аргентина"}}, {"stage": "1/2", "slot": "Полуфинал 1", "preds": {"Митя": "Франция", "Мила": "Франция", "Даша": "Франция", "Алёна": "Испания", "Володя": "Франция", "Аня": "Франция"}}, {"stage": "1/2", "slot": "Полуфинал 2", "preds": {"Митя": "Япония", "Мила": "Бразилия", "Даша": "Бразилия", "Алёна": "Бразилия", "Володя": "Бразилия", "Аня": "Англия"}}, {"stage": "Финал", "slot": "ЧЕМПИОН", "preds": {"Митя": "Франция", "Мила": "Бразилия", "Даша": "Бразилия", "Алёна": "Бразилия", "Володя": "Франция", "Аня": "США"}}, {"stage": "3 место", "slot": "Участник 1", "preds": {"Митя": "Испания", "Мила": "Испания", "Даша": "Испания", "Алёна": "Испания", "Володя": "Испания", "Аня": "США"}}, {"stage": "3 место", "slot": "Участник 2", "preds": {"Митя": "Аргентина", "Мила": "Аргентина", "Даша": "Аргентина", "Алёна": "Аргентина", "Володя": "Бразилия", "Аня": "Аргентина"}}, {"stage": "3 место", "slot": "Победитель (бронза)", "preds": {"Митя": "Испания", "Мила": "—", "Даша": "Бразилия", "Алёна": "Аргентина", "Володя": "Бразилия", "Аня": "—"}}]};
+const WEIGHTS = { "1/8":1, "1/4":2, "1/2":3, "Финал":5, "3 место":2 };
+const STAGE_ORDER = ["1/8","1/4","1/2","Финал","3 место"];
+const STAGE_TITLES = {
+  "1/8":"1/8 финала","1/4":"1/4 финала","1/2":"Полуфиналы",
+  "Финал":"Финал","3 место":"Матч за 3-е место"
+};
+
+let RESULTS = {};
+let activeStage = "all";
+let CFG = loadCfg();
+let online = false;
+
+function loadCfg(){
+  const h = new URLSearchParams(location.hash.slice(1));
+  if(h.get('bin') && h.get('read')){
+    const c = {bin:h.get('bin'), read:h.get('read')};
+    localStorage.setItem('wc_cfg', JSON.stringify(c));
+    return c;
+  }
+  try{ return JSON.parse(localStorage.getItem('wc_cfg')); }catch(e){ return null; }
+}
+function saveCfg(c){ CFG=c; localStorage.setItem('wc_cfg', JSON.stringify(c)); }
+
+const JB = 'https://api.jsonbin.io/v3/b/';
+
+async function pullResults(){
+  if(!CFG) return false;
+  try{
+    const r = await fetch(JB + CFG.bin + '/latest', {
+      headers:{'X-Access-Key': CFG.read, 'X-Bin-Meta':'false'}
+    });
+    if(!r.ok) return false;
+    const j = await r.json();
+    RESULTS = (j && typeof j==='object' && !Array.isArray(j)) ? j : {};
+    return true;
+  }catch(e){ return false; }
+}
+
+async function pushResults(masterKey){
+  if(!CFG) throw new Error('Сначала подключите бин (кнопка «Синхронизация»).');
+  const r = await fetch(JB + CFG.bin, {
+    method:'PUT',
+    headers:{'Content-Type':'application/json','X-Master-Key':masterKey},
+    body: JSON.stringify(RESULTS)
+  });
+  if(!r.ok){
+    if(r.status===401||r.status===403) throw new Error('Неверный master-ключ.');
+    throw new Error('Не удалось сохранить (код '+r.status+').');
+  }
+  return true;
+}
+
+function setDot(state){
+  const d=document.getElementById('syncDot');
+  d.className = 'synced ' + state;
+  d.title = state==='on' ? 'Синхронизировано — результаты общие'
+                         : 'Локальный режим — результаты только в этом браузере';
+}
+
+async function boot(){
+  // Тянем общие результаты ОДИН раз — на загрузке страницы.
+  // Фонового опроса нет, чтобы оставаться в пределах бесплатного лимита JSONBin.
+  if(CFG){ online = await pullResults(); }
+  if(!online){
+    const local = localStorage.getItem('wc_results');
+    if(local){ try{ RESULTS = JSON.parse(local); }catch(e){} }
+  }
+  reflectMode();
+  buildStageSeg();
+  render();
+}
+
+function reflectMode(){
+  setDot(online ? 'on' : 'off');
+  document.getElementById('storageNote').textContent =
+    online ? 'Результаты общие — синхронизируются через JSONBin.'
+           : (CFG ? 'Бин недоступен — работаем локально.'
+                  : 'Локальный режим. Нажмите «Синхронизация», чтобы сделать результаты общими.');
+  document.getElementById('modeHint').innerHTML =
+    online ? 'Выберите победителя в матче, введите <b>ключ записи</b> и нажмите <b>Сохранить</b> — обновление увидят все при следующем открытии.'
+           : 'Выберите победителя — таблица пересчитается сразу. Для общих результатов настройте синхронизацию.';
+}
+
+function buildStageSeg(){
+  const seg = document.getElementById('stageSeg');
+  const items = [["all","Все"]].concat(STAGE_ORDER.map(s=>[s, STAGE_TITLES[s]]));
+  seg.innerHTML = items.map(([k,l])=>
+    `<button role="tab" aria-selected="${k===activeStage}" data-s="${k}" class="${k===activeStage?'on':''}">${l}</button>`).join('');
+  seg.querySelectorAll('button').forEach(b=>b.onclick=()=>{
+    activeStage=b.dataset.s;
+    seg.querySelectorAll('button').forEach(x=>{
+      const on = x.dataset.s===activeStage;
+      x.classList.toggle('on',on);
+      x.setAttribute('aria-selected', on);
+    });
+    renderMatches();
+  });
+}
+
+function optionsForSlot(row){
+  const set = new Set();
+  const m = row.slot.match(/:\s*(.+?)\s+vs\s+(.+)$/i);
+  if(m){ set.add(m[1].trim()); set.add(m[2].trim()); }
+  DATA.names.forEach(n=>{ const v=row.preds[n]; if(v && v!=="—") set.add(v); });
+  return [...set].sort((a,b)=>a.localeCompare(b,'ru'));
+}
+
+function scores(){
+  const tbl = {};
+  DATA.names.forEach(n=>tbl[n]={pts:0,hits:0,champ:champPick(n)});
+  DATA.rows.forEach(row=>{
+    const actual = RESULTS[row.slot];
+    if(!actual) return;
+    const w = WEIGHTS[row.stage] || 1;
+    DATA.names.forEach(n=>{
+      if(row.preds[n] && row.preds[n]===actual){ tbl[n].pts+=w; tbl[n].hits++; }
+    });
+  });
+  return tbl;
+}
+function champPick(n){ const r=DATA.rows.find(x=>x.stage==="Финал"); return r?r.preds[n]:""; }
+function decidedCount(){ return DATA.rows.filter(r=>RESULTS[r.slot]).length; }
+
+function renderBoard(){
+  const tbl = scores();
+  const max = Math.max(1, ...DATA.names.map(n=>tbl[n].pts));
+  const ranked = [...DATA.names].sort((a,b)=>
+    tbl[b].pts-tbl[a].pts || tbl[b].hits-tbl[a].hits || a.localeCompare(b,'ru'));
+  const topPts = tbl[ranked[0]].pts;
+  document.getElementById('lboard').innerHTML = ranked.map((n,i)=>{
+    const s = tbl[n];
+    const lead = s.pts>0 && s.pts===topPts;
+    const champ = s.champ && s.champ!=="—"
+      ? `<span class="champ">чемпион: <b>${s.champ}</b></span>` : '';
+    return `<div class="lrow ${lead?'lead':''}" data-n="${n}">
+      <div class="rank">${i+1}</div>
+      <div class="who"><span class="name">${n}</span>${champ}</div>
+      <div class="bar"><i style="width:${Math.round(s.pts/max*100)}%"></i></div>
+      <div class="pts">${s.pts}<small>${s.hits} угад.</small></div>
+    </div>`;
+  }).join('');
+  document.getElementById('pillDecided').textContent = decidedCount();
+  document.getElementById('pillTotal').textContent = DATA.rows.length;
+  document.getElementById('boardNote').textContent =
+    decidedCount()===0 ? 'очки начисляются по мере ввода результатов'
+    : `сыграно ${decidedCount()} из ${DATA.rows.length}`;
+}
+
+function renderMatches(){
+  const area = document.getElementById('matchArea');
+  const stages = activeStage==="all" ? STAGE_ORDER : [activeStage];
+  let html = '';
+  stages.forEach(stage=>{
+    const rows = DATA.rows.filter(r=>r.stage===stage);
+    if(!rows.length) return;
+    const w = WEIGHTS[stage];
+    const word = w>1 ? (w<5?'балла':'баллов') : 'балл';
+    html += `<div class="stage-label">${STAGE_TITLES[stage]} · ${w} ${word}</div><div class="matches">`;
+    rows.forEach(row=>{
+      const actual = RESULTS[row.slot] || "";
+      const opts = optionsForSlot(row);
+      const optHtml = ['<option value="">— не сыграно —</option>']
+        .concat(opts.map(o=>`<option ${o===actual?'selected':''}>${o}</option>`)).join('');
+      const picks = DATA.names.map(n=>{
+        const v = row.preds[n] || "—";
+        let cls='';
+        if(actual){ cls = v===actual ? 'right' : (v==="—" ? '' : 'wrong'); }
+        return `<div class="pick ${cls}">
+          <span class="pname">${n}</span>
+          <span class="pteam">${v}<span class="tick"> ✓</span></span>
+        </div>`;
+      }).join('');
+      html += `<div class="match ${actual?'decided':''}">
+        <div class="top">
+          <div class="fixture">${row.slot}</div>
+          <div class="actual">
+            <label for="sel-${encodeURIComponent(row.slot)}">победитель</label>
+            <select id="sel-${encodeURIComponent(row.slot)}" data-slot="${encodeURIComponent(row.slot)}" aria-label="Победитель: ${row.slot}">${optHtml}</select>
+          </div>
+        </div>
+        <div class="picks">${picks}</div>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+  area.innerHTML = html;
+  area.querySelectorAll('select').forEach(sel=>{
+    sel.onchange = ()=>{
+      const slot = decodeURIComponent(sel.dataset.slot);
+      if(sel.value) RESULTS[slot]=sel.value; else delete RESULTS[slot];
+      if(!online) localStorage.setItem('wc_results', JSON.stringify(RESULTS));
+      render();
+    };
+  });
+}
+
+function render(){ renderBoard(); renderMatches(); }
+
+document.getElementById('saveBtn').onclick = async ()=>{
+  const key = document.getElementById('writeKey').value.trim();
+  if(!CFG){ openSetup(); return; }
+  if(!key){ toast('Введите ключ записи (master-ключ)', true); return; }
+  try{
+    await pushResults(key);
+    online = true; reflectMode();
+    toast('Сохранено для всех');
+  }catch(e){ toast(e.message, true); }
+};
+
+const setupModal = document.getElementById('setupModal');
+function openSetup(){
+  document.getElementById('cfgBin').value = (CFG&&CFG.bin) || '';
+  document.getElementById('cfgRead').value = (CFG&&CFG.read) || '';
+  document.getElementById('cfgState').textContent =
+    CFG ? (online?'Подключено и синхронизировано.':'Сохранено, но бин пока не читается.') : '';
+  setupModal.hidden=false;
+  document.getElementById('cfgBin').focus();
+}
+function closeSetup(){ setupModal.hidden=true; document.getElementById('setupBtn').focus(); }
+document.getElementById('setupBtn').onclick = openSetup;
+document.getElementById('setupClose').onclick = closeSetup;
+setupModal.addEventListener('click',e=>{ if(e.target.id==='setupModal') closeSetup(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape' && !setupModal.hidden) closeSetup(); });
+
+document.getElementById('cfgSave').onclick = async ()=>{
+  const bin=document.getElementById('cfgBin').value.trim();
+  const read=document.getElementById('cfgRead').value.trim();
+  if(!bin||!read){ document.getElementById('cfgState').textContent='Заполните BIN ID и Access Key.'; return; }
+  saveCfg({bin,read});
+  document.getElementById('cfgState').textContent='Проверяю доступ…';
+  online = await pullResults();
+  reflectMode(); render();
+  document.getElementById('cfgState').textContent =
+    online ? '✓ Подключено. Результаты теперь общие.' : 'Не удалось прочитать бин — проверьте BIN ID и Access Key.';
+};
+
+document.getElementById('cfgShare').onclick = async ()=>{
+  const bin=document.getElementById('cfgBin').value.trim();
+  const read=document.getElementById('cfgRead').value.trim();
+  if(!bin||!read){ document.getElementById('cfgState').textContent='Сначала впишите BIN ID и Access Key.'; return; }
+  const url = location.origin + location.pathname + '#bin='+encodeURIComponent(bin)+'&read='+encodeURIComponent(read);
+  try{ await navigator.clipboard.writeText(url); document.getElementById('cfgState').textContent='Ссылка скопирована — отправьте её друзьям.'; }
+  catch(e){ document.getElementById('cfgState').textContent=url; }
+};
+
+let toastT;
+function toast(msg, err){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast show'+(err?' err':'');
+  clearTimeout(toastT); toastT=setTimeout(()=>t.className='toast',2600);
+}
+
+boot();
+</script>
+</body>
+</html>
