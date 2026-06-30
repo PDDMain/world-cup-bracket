@@ -387,6 +387,11 @@ function teamName(ru){
   const m = I18N.teams && I18N.teams[ru];
   return (m && m[LANG]) || ru;
 }
+function personName(ru){
+  if(LANG === "ru") return ru;
+  const m = I18N.names && I18N.names[ru];
+  return (m && m[LANG]) || ru;
+}
 function ptsWord(n){ return n === 1 ? t('pts_one') : (n >= 2 && n <= 4 ? t('pts_few') : t('pts_many')); }
 function applyStatic(){
   document.documentElement.lang = LANG;
@@ -565,7 +570,7 @@ function renderBoard(){
       ? `<span class="champ">${t('p_champion')}: <b>${esc(teamName(s.champ))}</b></span>` : '';
     return `<div class="lrow ${lead?'lead':''}" data-n="${n}">
       <div class="rank">${i+1}</div>
-      <div class="who"><a class="name" href="#p=${encodeURIComponent(n)}" title="Открыть сетку: ${esc(n)}">${esc(n)}</a>${champ}</div>
+      <div class="who"><a class="name" href="#p=${encodeURIComponent(n)}" title="${esc(personName(n))}">${esc(personName(n))}</a>${champ}</div>
       <div class="bar"><i style="width:${Math.round(s.pts/max*100)}%"></i></div>
       <div class="pts">${s.pts}<small>${s.hits} ${t('hits_short')}</small></div>
     </div>`;
@@ -607,7 +612,7 @@ function renderMatches(){
         if(actual){ cls = v===actual ? 'right' : (v==="—" ? '' : 'wrong'); }
         const mark = cls==='right' ? ' ✓' : (cls==='wrong' ? ' ✗' : '');
         return `<div class="pick ${cls}">
-          <span class="pname">${esc(n)}</span>
+          <span class="pname">${esc(personName(n))}</span>
           <span class="pteam">${esc(teamName(v))}<span class="tick">${mark}</span></span>
         </div>`;
       }).join('');
@@ -658,7 +663,7 @@ function renderPnav(){
   const ranked = [...DATA.names].sort((a,b) =>
     tbl[b].pts-tbl[a].pts || tbl[b].hits-tbl[a].hits || a.localeCompare(b,'ru'));
   document.getElementById('pnav').innerHTML = ranked.map(n =>
-    `<a href="#p=${encodeURIComponent(n)}">${esc(n)} <span class="mini">${tbl[n].pts}</span></a>`).join('');
+    `<a href="#p=${encodeURIComponent(n)}">${esc(personName(n))} <span class="mini">${tbl[n].pts}</span></a>`).join('');
 }
 
 const BRACKET_ROUNDS = ["1/16","1/8","1/4","1/2","Финал"];
@@ -700,7 +705,7 @@ function renderPlayer(name){
   const champRow = byId["FINAL"];
   const champ = s.champ && s.champ!=="—" ? `<span class="pstat pchamp">${t('p_champion')}: <b>${esc(teamName(s.champ))}</b></span>` : '';
   document.getElementById('playerHead').innerHTML = `
-    <h2>${esc(name)}</h2>
+    <h2>${esc(personName(name))}</h2>
     <span class="pstat">${t('p_place')} <b>${rank}</b></span>
     <span class="pstat"><b>${s.pts}</b> ${t('p_points')}</span>
     <span class="pstat"><b>${s.hits}</b>/${DATA.rows.length} ${t('p_guessed')}</span>

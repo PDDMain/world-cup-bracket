@@ -134,6 +134,18 @@ window.I18N = {
     share_copied: "Bağlantı kopyalandı — arkadaşlarınıza gönderin.",
     pts_one: "puan", pts_few: "puan", pts_many: "puan",
   },
+  // Отображаемые имена участников. Ключ — русское имя из data.json.
+  names: {
+    "Митя":   {en:"Mitya",   tr:"Mitya"},
+    "Мила":   {en:"Mila",    tr:"Mila"},
+    "Даша":   {en:"Dasha",   tr:"Daşa"},
+    "Алёна":  {en:"Alyona",  tr:"Alyona"},
+    "Володя": {en:"Volodya", tr:"Volodya"},
+    "Даня":   {en:"Danya",   tr:"Danya"},
+    "Денис":  {en:"Denis",   tr:"Denis"},
+    "Мария":  {en:"Maria",   tr:"Mariya"},
+    "Арда":   {en:"Arda",    tr:"Arda"},
+  },
   // Отображаемые названия команд. Ключ — русское значение из data.json.
   teams: {
     "Германия": {en:"Germany", tr:"Almanya"},

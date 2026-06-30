@@ -270,9 +270,15 @@ const en = await page.evaluate(() => ({
   fixture1: document.querySelector('select[data-id="R16-1"]').closest('.match').querySelector('.fixture').textContent,
   optionValueStillRu: [...document.querySelector('select[data-id="R16-1"]').options].some(o => o.value === 'Германия'),
   selValue: document.querySelector('select[data-id="R16-1"]').value,
+  names: [...document.querySelectorAll('#lboard .name')].map(e => e.textContent.trim()),
+  navHrefRu: document.querySelector('#pnav a').getAttribute('href'),
 }));
 console.log('EN:', JSON.stringify(en));
 (en.tab === 'Round of 32') ? pass('EN: stage tab translated') : fail(`EN tab ${en.tab}`);
+// participant names transliterated (no Cyrillic) but the #p= hash stays Russian
+(en.names.length === 9 && en.names.every(n => !/[А-Яа-яЁё]/.test(n)) && en.names.includes('Mitya'))
+  ? pass('EN: participant names transliterated (incl. Mitya)') : fail(`EN names ${JSON.stringify(en.names)}`);
+(/#p=%D0%/.test(en.navHrefRu)) ? pass('EN: player-link hash stays Russian (stable URLs)') : fail(`nav href ${en.navHrefRu}`);
 (en.save === 'Save') ? pass('EN: Save button translated') : fail(`EN save ${en.save}`);
 (en.htmlLang === 'en') ? pass('EN: <html lang> updated') : fail(`htmlLang ${en.htmlLang}`);
 (en.fixture1.includes('Germany') && en.fixture1.includes('Paraguay')) ? pass('EN: team names localized in fixture') : fail(`EN fixture ${en.fixture1}`);
