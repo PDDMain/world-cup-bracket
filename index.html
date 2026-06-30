@@ -184,6 +184,11 @@
   .pick.wrong .pteam{color:var(--hit);font-weight:600;text-decoration:line-through;text-decoration-color:rgba(224,69,43,.45)}
   .pick.wrong .pname{color:var(--hit)}
   .pick.wrong .tick{opacity:1;color:var(--hit)}
+  /* уже невозможно (команда выбыла раньше) — фиолетовый + ✗ */
+  .pick.dead{background:rgba(124,58,237,.12)}
+  .pick.dead .pteam{color:#7c3aed;font-weight:600;text-decoration:line-through;text-decoration-color:rgba(124,58,237,.45)}
+  .pick.dead .pname{color:#7c3aed}
+  .pick.dead .tick{opacity:1;color:#7c3aed}
 
   footer{margin-top:40px;padding-top:20px;border-top:1px solid var(--line);
     color:var(--chalk-soft);font-size:12px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
@@ -251,6 +256,7 @@
   .legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
   .legend .lc{background:rgba(47,125,79,.55);border:1px solid var(--grass)}
   .legend .lw{background:rgba(224,69,43,.45);border:1px solid var(--hit)}
+  .legend .ld{background:rgba(124,58,237,.5);border:1px solid #7c3aed}
   .legend .lu{background:var(--night-2);border:1px solid var(--line)}
 
   .bracket{display:flex;gap:14px;overflow-x:auto;padding-bottom:10px;align-items:stretch}
@@ -271,6 +277,11 @@
   .bchip.wrong .team{color:#f0a08e}
   .bchip.wrong .team .tn{text-decoration:line-through;text-decoration-color:rgba(240,160,142,.6)}
   .bchip.wrong .mark{color:var(--hit)}
+  .bchip.dead{border-color:#7c3aed;border-left-color:#7c3aed;background:linear-gradient(90deg,rgba(124,58,237,.20),var(--night-2) 70%)}
+  .bchip.dead .team{color:#c4b5fd}
+  .bchip.dead .team .tn{text-decoration:line-through;text-decoration-color:rgba(196,181,253,.6)}
+  .bchip.dead .mark{color:#a78bfa}
+  .bchip .fact.dead-fact{color:#a78bfa}
   .bchip.unknown{opacity:.85}
   .bchip.unknown .team{color:var(--chalk)}
   .bchip .fact{font-size:10.5px;color:#5fd08a;font-weight:600}
@@ -335,6 +346,7 @@
     <div class="legend">
       <span><i class="lc"></i> <span data-i18n="legend_correct">угадал</span></span>
       <span><i class="lw"></i> <span data-i18n="legend_wrong">не угадал</span></span>
+      <span><i class="ld"></i> <span data-i18n="legend_dead">уже невозможно</span></span>
       <span><i class="lu"></i> <span data-i18n="legend_unknown">ещё не сыграно</span></span>
     </div>
     <div class="bracket" id="playerBracket"></div>
@@ -1132,6 +1144,18 @@ function fixtureTeams(row){
 function optionsForSlot(row){ return fixtureTeams(row).filter(Boolean); }
 function ready(row){ const t = fixtureTeams(row); return !!(t[0] && t[1]); } // оба соперника известны
 
+// Команды, уже выбывшие из турнира (проиграли сыгранный матч).
+let DEAD = new Set();
+function eliminatedTeams(){
+  const dead = new Set();
+  DATA.rows.forEach(row => {
+    const w = RESULTS[row.id];
+    if(!w) return;
+    fixtureTeams(row).forEach(team => { if(team && team !== w) dead.add(team); });
+  });
+  return dead;
+}
+
 // Снять результаты, которые перестали быть валидными после изменения вышестоящего матча.
 function pruneInvalid(){
   let changed = true;
@@ -1216,7 +1240,8 @@ function renderMatches(){
         const v = row.preds[n] || "—";
         let cls='';
         if(actual){ cls = v===actual ? 'right' : (v==="—" ? '' : 'wrong'); }
-        const mark = cls==='right' ? ' ✓' : (cls==='wrong' ? ' ✗' : '');
+        else if(v!=="—" && DEAD.has(v)){ cls='dead'; }
+        const mark = cls==='right' ? ' ✓' : ((cls==='wrong'||cls==='dead') ? ' ✗' : '');
         return `<div class="pick ${cls}">
           <span class="pname">${esc(personName(n))}</span>
           <span class="pteam">${esc(teamName(v))}<span class="tick">${mark}</span></span>
@@ -1277,8 +1302,9 @@ const BRACKET_ROUNDS = ["1/16","1/8","1/4","1/2","Финал"];
 function chipStatus(row, name){
   const pick = row.preds[name] || "—";
   const actual = RESULTS[row.id] || "";
-  if(!actual || pick === "—") return {st:'unknown', pick, actual};
-  return {st: pick===actual ? 'correct' : 'wrong', pick, actual};
+  if(actual) return {st: pick===actual ? 'correct' : 'wrong', pick, actual};
+  if(pick !== "—" && DEAD.has(pick)) return {st:'dead', pick, actual};
+  return {st:'unknown', pick, actual};
 }
 
 function bchip(row, name, opts={}){
@@ -1293,8 +1319,9 @@ function bchip(row, name, opts={}){
     meta = t('pair_winner');
   }
   const trophy = opts.champ ? '🏆 ' : '';
-  const mark = st==='correct' ? '✓' : (st==='wrong' ? '✗' : '');
-  const fact = st==='wrong' ? `<span class="fact">${esc(t('fact'))} ${esc(teamName(actual))}</span>` : '';
+  const mark = st==='correct' ? '✓' : ((st==='wrong'||st==='dead') ? '✗' : '');
+  const fact = st==='wrong' ? `<span class="fact">${esc(t('fact'))} ${esc(teamName(actual))}</span>`
+            : (st==='dead' ? `<span class="fact dead-fact">${esc(t('legend_dead'))}</span>` : '');
   return `<div class="bchip ${st}">
     <div class="team">${trophy}<span class="tn">${esc(teamName(pick))}</span><span class="mark">${mark}</span></div>
     <div class="meta">${meta}</div>
@@ -1303,6 +1330,7 @@ function bchip(row, name, opts={}){
 }
 
 function renderPlayer(name){
+  DEAD = eliminatedTeams();
   const tbl = scores();
   const s = tbl[name];
   const ranked = [...DATA.names].sort((a,b) =>
@@ -1339,7 +1367,7 @@ function route(){
 }
 window.addEventListener('hashchange', route);
 
-function render(){ renderBoard(); renderMatches(); renderPnav(); if(!document.getElementById('playerView').hidden){ const n=decodeURIComponent(location.hash.slice(3)); if(DATA.names.includes(n)) renderPlayer(n); } }
+function render(){ DEAD = eliminatedTeams(); renderBoard(); renderMatches(); renderPnav(); if(!document.getElementById('playerView').hidden){ const n=decodeURIComponent(location.hash.slice(3)); if(DATA.names.includes(n)) renderPlayer(n); } }
 
 document.getElementById('saveBtn').onclick = async () => {
   const btn = document.getElementById('saveBtn');

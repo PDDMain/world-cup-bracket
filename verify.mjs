@@ -185,6 +185,7 @@ const pv = await page.evaluate(() => {
     head: document.getElementById('playerHead').textContent.replace(/\s+/g,' ').trim(),
     correct: document.querySelectorAll('#playerBracket .bchip.correct, #playerThird .bchip.correct').length,
     wrong: document.querySelectorAll('#playerBracket .bchip.wrong, #playerThird .bchip.wrong').length,
+    dead: document.querySelectorAll('#playerBracket .bchip.dead, #playerThird .bchip.dead').length,
     unknown: document.querySelectorAll('#playerBracket .bchip.unknown, #playerThird .bchip.unknown').length,
     cols: document.querySelectorAll('#playerBracket .bcol').length,
     totalChips: all.length + document.querySelectorAll('#playerThird .bchip').length,
@@ -195,10 +196,12 @@ pv.playerShown ? pass('player view shown, main hidden on #p= route') : fail('pla
 pv.cols === 5 ? pass('5 bracket columns (1/16..Финал)') : fail(`cols ${pv.cols} != 5`);
 pv.totalChips === 32 ? pass('32 chips (16+8+4+2+1 bracket + 1 bronze)') : fail(`chips ${pv.totalChips} != 32`);
 pv.head.includes('Денис') ? pass('player head shows name') : fail('no name in head');
-// Денис correct = R16-13 (1). wrong = R16-9 (he picked Япония, actual Бразилия) (1). rest unknown.
+// Денис: correct = R16-13 Аргентина (1). wrong = R16-9 Япония (decided, 1).
+// dead = his later Япония picks (R8-5, R4-3) now impossible (2). rest unknown (28).
 (pv.correct === 1) ? pass('exactly 1 green (correct) chip') : fail(`correct ${pv.correct} != 1`);
 (pv.wrong === 1) ? pass('exactly 1 red (wrong) chip') : fail(`wrong ${pv.wrong} != 1`);
-(pv.unknown === 30) ? pass('30 grey (unknown) chips') : fail(`unknown ${pv.unknown} != 30`);
+(pv.dead === 2) ? pass('2 purple (eliminated) chips — later Япония picks') : fail(`dead ${pv.dead} != 2`);
+(pv.unknown === 28) ? pass('28 grey (unknown) chips') : fail(`unknown ${pv.unknown} != 28`);
 // the wrong chip should expose the actual result (факт)
 const fact = await page.evaluate(() => {
   const w = document.querySelector('#playerBracket .bchip.wrong');
@@ -256,6 +259,33 @@ console.log('MARKS:', JSON.stringify(marks));
 // green ~ rgb(47,125,79); red ~ rgb(224,69,43)
 (marks.rightColor.includes('47, 125, 79')) ? pass('correct pick is green') : fail(`right color ${marks.rightColor}`);
 (marks.wrongColor.includes('224, 69, 43')) ? pass('wrong pick is red') : fail(`wrong color ${marks.wrongColor}`);
+
+// 11b) Eliminated picks: known matchup, pick's team already knocked out → purple + ✗
+await page.evaluate(() => { RESULTS = {}; render(); });
+await setWinner('R16-3', 'Канада');   // ЮАР eliminated
+await setWinner('R16-4', 'Марокко');  // Нидерланды eliminated → R8-2 will be Канада vs Марокко
+await page.waitForTimeout(100);
+const r82 = await page.evaluate(() => {
+  const card = document.querySelector('select[data-id="R8-2"]').closest('.match');
+  const dead = [...card.querySelectorAll('.pick.dead')];
+  return {
+    decided: card.classList.contains('decided'),
+    fixture: card.querySelector('.fixture').textContent.replace(/\s+/g,' ').trim(),
+    dead: dead.length,
+    right: card.querySelectorAll('.pick.right').length,
+    wrong: card.querySelectorAll('.pick.wrong').length,
+    deadMark: dead.length ? dead[0].querySelector('.tick').textContent.trim() : '',
+    deadColor: dead.length ? getComputedStyle(dead[0].querySelector('.pteam')).color : '',
+    deadTeam: dead.length ? dead[0].querySelector('.pteam').textContent.replace('✗','').trim() : '',
+  };
+});
+console.log('R8-2 (Канада vs Марокко, undecided):', JSON.stringify(r82));
+(!r82.decided && r82.fixture.includes('Канада') && r82.fixture.includes('Марокко')) ? pass('R8-2 matchup known but undecided') : fail(`R8-2 ${r82.fixture}`);
+// 4 picked Нидерланды (Митя,Даша,Алёна,Денис) → eliminated/purple; none right/wrong yet
+(r82.dead === 4 && r82.right === 0 && r82.wrong === 0) ? pass('4 eliminated (purple) picks, none green/red') : fail(`dead ${r82.dead} right ${r82.right} wrong ${r82.wrong}`);
+(r82.deadMark === '✗') ? pass('eliminated pick shows ✗') : fail(`dead mark ${r82.deadMark}`);
+(r82.deadColor.includes('124, 58, 237')) ? pass('eliminated pick is purple') : fail(`dead color ${r82.deadColor}`);
+(r82.deadTeam === 'Нидерланды') ? pass('eliminated pick is the knocked-out team (Нидерланды)') : fail(`dead team ${r82.deadTeam}`);
 
 // 12) i18n — switch to English and Turkish, verify UI strings + team names localize
 await page.goto(file, { waitUntil: 'networkidle' });
