@@ -71,7 +71,7 @@ r81 = await matchInfo('R8-1');
 
 // R16-1: everyone picked Германия (7 right, 0 wrong)
 const r161 = await matchInfo('R16-1');
-(r161.right === 7 && r161.wrong === 0) ? pass('R16-1 all 7 correct') : fail(`R16-1 right ${r161.right} wrong ${r161.wrong}`);
+(r161.right === 9 && r161.wrong === 0) ? pass('R16-1 all 9 correct') : fail(`R16-1 right ${r161.right} wrong ${r161.wrong}`);
 
 // 4) Decide R8-1 → Франция. Then test cascade pruning:
 await setWinner('R8-1', 'Франция');
@@ -97,11 +97,11 @@ await setWinner('R16-9', 'Бразилия');
 await setWinner('R16-13', 'Аргентина');
 await page.waitForTimeout(120);
 const r169 = await matchInfo('R16-9');
-(r169.right === 5 && r169.wrong === 2) ? pass('R16-9: 5 right / 2 wrong (Митя,Денис picked Япония)') : fail(`R16-9 right ${r169.right} wrong ${r169.wrong}`);
+(r169.right === 7 && r169.wrong === 2) ? pass('R16-9: 7 right / 2 wrong (Митя,Денис picked Япония)') : fail(`R16-9 right ${r169.right} wrong ${r169.wrong}`);
 
 // Expected points after these two 1/16 results (weight 1 each):
 // Everyone +1 for Аргентина. +1 for Бразилия except Митя & Денис.
-const exp = { 'Митя':1,'Мила':2,'Даша':2,'Алёна':2,'Володя':2,'Даня':2,'Денис':1 };
+const exp = { 'Митя':1,'Мила':2,'Даша':2,'Алёна':2,'Володя':2,'Даня':2,'Денис':1,'Мария':2,'Арда':2 };
 const b = await board();
 console.log('BOARD:', b.map(x=>`${x.name}:${x.pts}`).join(' '));
 let scoreOk = true;
@@ -209,7 +209,7 @@ const backOk = await page.evaluate(() => !document.getElementById('mainView').hi
 backOk ? pass('back link returns to main view') : fail('back link did not return to main');
 // pnav has 7 player links
 const pnav = await page.$$eval('#pnav a', a => a.length);
-pnav === 7 ? pass('player nav has 7 links') : fail(`pnav ${pnav} != 7`);
+pnav === 9 ? pass('player nav has 9 links') : fail(`pnav ${pnav} != 9`);
 
 // 10) Unsaved-changes indicator (online): changing a result via dropdown marks dirty
 await page.goto(file, { waitUntil: 'networkidle' }); // fresh load (online via gist)
