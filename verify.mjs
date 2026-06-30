@@ -10,6 +10,9 @@ const consoleErrors = [];
 page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
 page.on('pageerror', e => consoleErrors.push('pageerror: ' + e.message));
 
+// Pin UI language to Russian so assertions on RU strings/team names are deterministic.
+await page.addInitScript(() => { try { localStorage.setItem('wc_lang', 'ru'); } catch (e) {} });
+
 await page.goto(file, { waitUntil: 'networkidle' });
 
 let ok = true;
@@ -253,6 +256,39 @@ console.log('MARKS:', JSON.stringify(marks));
 // green ~ rgb(47,125,79); red ~ rgb(224,69,43)
 (marks.rightColor.includes('47, 125, 79')) ? pass('correct pick is green') : fail(`right color ${marks.rightColor}`);
 (marks.wrongColor.includes('224, 69, 43')) ? pass('wrong pick is red') : fail(`wrong color ${marks.wrongColor}`);
+
+// 12) i18n — switch to English and Turkish, verify UI strings + team names localize
+await page.goto(file, { waitUntil: 'networkidle' });
+await setWinner('R16-1', 'Германия'); // value stays RU; display should localize
+await page.waitForTimeout(80);
+await page.click('#langSeg button[data-l="en"]');
+await page.waitForTimeout(120);
+const en = await page.evaluate(() => ({
+  tab: [...document.querySelectorAll('#stageSeg button')][1].textContent.trim(),
+  save: document.getElementById('saveBtn').textContent.trim(),
+  htmlLang: document.documentElement.lang,
+  fixture1: document.querySelector('select[data-id="R16-1"]').closest('.match').querySelector('.fixture').textContent,
+  optionValueStillRu: [...document.querySelector('select[data-id="R16-1"]').options].some(o => o.value === 'Германия'),
+  selValue: document.querySelector('select[data-id="R16-1"]').value,
+}));
+console.log('EN:', JSON.stringify(en));
+(en.tab === 'Round of 32') ? pass('EN: stage tab translated') : fail(`EN tab ${en.tab}`);
+(en.save === 'Save') ? pass('EN: Save button translated') : fail(`EN save ${en.save}`);
+(en.htmlLang === 'en') ? pass('EN: <html lang> updated') : fail(`htmlLang ${en.htmlLang}`);
+(en.fixture1.includes('Germany') && en.fixture1.includes('Paraguay')) ? pass('EN: team names localized in fixture') : fail(`EN fixture ${en.fixture1}`);
+(en.optionValueStillRu && en.selValue === 'Германия') ? pass('EN: option VALUES stay Russian (scoring unaffected)') : fail(`EN option value broke: ${en.selValue}`);
+// scoring still correct after language switch (Германия won R16-1 → all 9 right)
+const enScore = await page.evaluate(() => document.querySelectorAll('select[data-id="R16-1"]').length && document.querySelector('select[data-id="R16-1"]').closest('.match').querySelectorAll('.pick.right').length);
+(enScore === 9) ? pass('EN: scoring intact (9 correct on R16-1)') : fail(`EN score ${enScore}`);
+await page.click('#langSeg button[data-l="tr"]');
+await page.waitForTimeout(120);
+const trState = await page.evaluate(() => ({
+  tab: [...document.querySelectorAll('#stageSeg button')][1].textContent.trim(),
+  save: document.getElementById('saveBtn').textContent.trim(),
+  saved: localStorage.getItem('wc_lang'),
+}));
+(trState.tab === 'Son 32' && trState.save === 'Kaydet') ? pass('TR: UI translated') : fail(`TR ${JSON.stringify(trState)}`);
+(trState.saved === 'tr') ? pass('language choice persisted to localStorage') : fail(`wc_lang=${trState.saved}`);
 
 console.log('CONSOLE ERRORS:', consoleErrors.length ? consoleErrors : 'none');
 if (consoleErrors.length) fail('console errors present');

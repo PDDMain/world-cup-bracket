@@ -52,7 +52,13 @@
     font-weight:600;letter-spacing:.5px;text-transform:uppercase;
     font-size:clamp(26px,5vw,46px);line-height:.98;color:#fff;
   }
-  .hero h1 span{color:var(--gold)}
+  .hero h1 .gold{color:var(--gold)}
+  .hero-side{display:flex;flex-direction:column;align-items:flex-end;gap:10px}
+  .langseg{display:flex;background:var(--night-2);border:1px solid var(--line);border-radius:8px;padding:3px;gap:2px}
+  .langseg button{border:0;background:transparent;color:var(--chalk-soft);font-family:Inter;
+    font-size:12px;font-weight:700;letter-spacing:.5px;cursor:pointer;padding:5px 9px;border-radius:6px;transition:.18s}
+  .langseg button:hover{color:var(--chalk)}
+  .langseg button.on{background:var(--gold);color:#1d2733}
   .hero .sub{color:var(--chalk-soft);font-size:14px;margin-top:6px;max-width:52ch}
   .pill{
     display:inline-flex;align-items:center;gap:8px;
@@ -287,10 +293,15 @@
 <div class="wrap">
   <header class="hero">
     <div>
-      <h1>Кто угадает <span>сетку</span></h1>
-      <p class="sub">Девять бланков, один турнир. Отмечайте реальных победителей — они проходят дальше по сетке, таблица очков пересчитывается сама, а угаданные ставки подсвечиваются.</p>
+      <h1><span data-i18n="title_a">Кто угадает</span> <span class="gold" data-i18n="title_b">сетку</span></h1>
+      <p class="sub" data-i18n="subtitle">Девять бланков, один турнир.</p>
     </div>
-    <div class="pill">Сыграно матчей <b id="pillDecided">0</b> / <span id="pillTotal">0</span></div>
+    <div class="hero-side">
+      <div class="langseg" id="langSeg" role="group" aria-label="Язык / Language / Dil">
+        <button data-l="ru">RU</button><button data-l="en">EN</button><button data-l="tr">TR</button>
+      </div>
+      <div class="pill"><span data-i18n="pill_played">Сыграно матчей</span> <b id="pillDecided">0</b> / <span id="pillTotal">0</span></div>
+    </div>
   </header>
 
   <div id="mainView">
@@ -298,7 +309,7 @@
 
   <section class="board" aria-label="Турнирная таблица">
     <div class="board-head">
-      <h2>Турнирная таблица</h2>
+      <h2 data-i18n="board_title">Турнирная таблица</h2>
       <span class="decided" id="boardNote">очки начисляются по мере ввода результатов</span>
     </div>
     <div class="lboard" id="lboard"></div>
@@ -308,9 +319,9 @@
     <div class="seg" id="stageSeg" role="tablist" aria-label="Фильтр по стадии"></div>
     <div class="admin">
       <span class="synced" id="syncDot" title="состояние синхронизации" role="status" aria-live="polite"></span>
-      <button class="btn" id="setupBtn">Поделиться</button>
-      <span class="dirty-tag" id="dirtyTag" hidden>● не сохранено</span>
-      <button class="btn save" id="saveBtn">Сохранить</button>
+      <button class="btn" id="setupBtn" data-i18n="btn_share">Поделиться</button>
+      <span class="dirty-tag" id="dirtyTag" data-i18n="dirty" hidden>● не сохранено</span>
+      <button class="btn save" id="saveBtn" data-i18n="btn_save">Сохранить</button>
     </div>
     <p class="hint" id="modeHint"></p>
   </div>
@@ -319,19 +330,19 @@
   </div><!-- /mainView -->
 
   <section id="playerView" hidden aria-label="Сетка участника">
-    <a class="pback" href="#" id="pback">← ко всем участникам</a>
+    <a class="pback" href="#" id="pback" data-i18n="back_all">← ко всем участникам</a>
     <div class="phead" id="playerHead"></div>
     <div class="legend">
-      <span><i class="lc"></i> угадал</span>
-      <span><i class="lw"></i> не угадал</span>
-      <span><i class="lu"></i> ещё не сыграно</span>
+      <span><i class="lc"></i> <span data-i18n="legend_correct">угадал</span></span>
+      <span><i class="lw"></i> <span data-i18n="legend_wrong">не угадал</span></span>
+      <span><i class="lu"></i> <span data-i18n="legend_unknown">ещё не сыграно</span></span>
     </div>
     <div class="bracket" id="playerBracket"></div>
     <div class="pthird" id="playerThird"></div>
   </section>
 
   <footer>
-    <span>Очки: 1/16 — 1 балл · 1/8 — 1 · 1/4 — 2 · 1/2 — 3 · финал — 5 · 3-е место — 2.</span>
+    <span data-i18n="footer_scoring">Очки: 1/16 — 1 балл · 1/8 — 1 · 1/4 — 2 · 1/2 — 3 · финал — 5 · 3-е место — 2.</span>
     <span id="storageNote"></span>
   </footer>
 </div>
@@ -339,22 +350,20 @@
 
 <div class="modal" id="setupModal" hidden role="dialog" aria-modal="true" aria-labelledby="setupTitle">
   <div class="sheet">
-    <button class="x" id="setupClose" aria-label="Закрыть">✕</button>
-    <h3 id="setupTitle">Общие результаты</h3>
-    <p class="mtext">Результаты у всех <b>общие</b>: они хранятся в Gist на GitHub и подгружаются
-      при открытии страницы. Отметьте победителя матча и нажмите <b>«Сохранить»</b> —
-      обновление увидят все, кто откроет ссылку (после перезагрузки страницы).</p>
+    <button class="x" id="setupClose" data-i18n-aria="close" aria-label="Закрыть">✕</button>
+    <h3 id="setupTitle" data-i18n="modal_title">Общие результаты</h3>
+    <p class="mtext" data-i18n="modal_p1">Результаты у всех общие.</p>
 
-    <p class="mtext small">Ключ доступа уже встроен в страницу — отдельно ничего вводить не нужно.
-      Чтобы новые результаты появились на других устройствах, там нужно <b>перезагрузить</b> страницу.</p>
+    <p class="mtext small" data-i18n="modal_p2">Ключ доступа уже встроен в страницу.</p>
 
     <div class="mrow">
-      <button class="btn" id="cfgShare">Скопировать ссылку для всех</button>
+      <button class="btn" id="cfgShare" data-i18n="modal_share">Скопировать ссылку для всех</button>
     </div>
     <p class="mtext small" id="cfgState"></p>
   </div>
 </div>
 
+<script src="i18n.js"></script>
 <script>
 const DATA = {
   "names": [
@@ -963,12 +972,47 @@ const DATA = {
     }
   ]
 };
+
+// ---------- Локализация ----------
+const I18N = window.I18N || { ru:{}, teams:{} };
+const LANGS = ["ru","en","tr"];
+let LANG = (function(){
+  const saved = localStorage.getItem('wc_lang');
+  if(LANGS.includes(saved)) return saved;
+  const nav = (navigator.language||'ru').slice(0,2).toLowerCase();
+  return LANGS.includes(nav) ? nav : 'ru';
+})();
+function t(key){
+  const d = I18N[LANG] || {};
+  return (key in d) ? d[key] : (I18N.ru[key] != null ? I18N.ru[key] : key);
+}
+function tf(key, ...args){ return t(key).replace(/\{(\d+)\}/g, (_,i)=> args[i] != null ? args[i] : ''); }
+function teamName(ru){
+  if(!ru || ru === "—") return ru;
+  if(LANG === "ru") return ru;
+  const m = I18N.teams && I18N.teams[ru];
+  return (m && m[LANG]) || ru;
+}
+function ptsWord(n){ return n === 1 ? t('pts_one') : (n >= 2 && n <= 4 ? t('pts_few') : t('pts_many')); }
+function applyStatic(){
+  document.documentElement.lang = LANG;
+  document.title = t('title_page');
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-aria]').forEach(el => { el.setAttribute('aria-label', t(el.dataset.i18nAria)); });
+  document.querySelectorAll('#langSeg button').forEach(b => b.classList.toggle('on', b.dataset.l === LANG));
+}
+function setLang(l){
+  if(!LANGS.includes(l)) return;
+  LANG = l; localStorage.setItem('wc_lang', l);
+  applyStatic(); reflectMode(); buildStageSeg(); render(); route();
+}
 const WEIGHTS = { "1/16":1, "1/8":1, "1/4":2, "1/2":3, "Финал":5, "3 место":2 };
 const STAGE_ORDER = ["1/16","1/8","1/4","1/2","Финал","3 место"];
-const STAGE_TITLES = {
-  "1/16":"1/16 финала","1/8":"1/8 финала","1/4":"1/4 финала","1/2":"Полуфиналы",
-  "Финал":"Финал","3 место":"Матч за 3-е место"
+const STAGE_KEY = {
+  "1/16":"stage_1_16","1/8":"stage_1_8","1/4":"stage_1_4","1/2":"stage_1_2",
+  "Финал":"stage_final","3 место":"stage_3"
 };
+function stageTitle(stage){ return t(STAGE_KEY[stage] || stage); }
 
 const byId = {};
 DATA.rows.forEach(r => byId[r.id] = r);
@@ -1031,8 +1075,8 @@ async function pushResults(){
     body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify(RESULTS) } } })
   });
   if(!r.ok){
-    if(r.status===401||r.status===403) throw new Error('Встроенный ключ записи недействителен — нужно обновить страницу/файл.');
-    throw new Error('Не удалось сохранить (код '+r.status+').');
+    if(r.status===401||r.status===403) throw new Error(t('err_token'));
+    throw new Error(tf('err_save', r.status));
   }
   return true;
 }
@@ -1052,6 +1096,7 @@ async function boot(){
     const local = localStorage.getItem('wc_results');
     if(local){ try{ RESULTS = JSON.parse(local); pruneInvalid(); }catch(e){} }
   }
+  applyStatic();
   reflectMode();
   buildStageSeg();
   render();
@@ -1060,12 +1105,8 @@ async function boot(){
 
 function reflectMode(){
   setDot(online ? 'on' : 'off');
-  document.getElementById('storageNote').textContent =
-    online ? 'Результаты общие — хранятся в Gist на GitHub.'
-           : 'Не удалось загрузить общие результаты — работаем локально (только в этом браузере).';
-  document.getElementById('modeHint').innerHTML =
-    online ? 'Отметьте победителя — он пройдёт дальше по сетке. Нажмите <b>«Сохранить»</b> — обновление увидят все при следующем открытии страницы.'
-           : 'Отметьте победителя — он пройдёт дальше по сетке, таблица пересчитается сразу. Общие результаты сейчас недоступны.';
+  document.getElementById('storageNote').textContent = online ? t('storage_online') : t('storage_offline');
+  document.getElementById('modeHint').textContent = online ? t('hint_online') : t('hint_offline');
 }
 
 // --- Сетка: команды, выходящие в матч (по фактическим результатам) ---
@@ -1127,19 +1168,19 @@ function renderBoard(){
     const s = tbl[n];
     const lead = s.pts>0 && s.pts===topPts;
     const champ = s.champ && s.champ!=="—"
-      ? `<span class="champ">чемпион: <b>${s.champ}</b></span>` : '';
+      ? `<span class="champ">${t('p_champion')}: <b>${esc(teamName(s.champ))}</b></span>` : '';
     return `<div class="lrow ${lead?'lead':''}" data-n="${n}">
       <div class="rank">${i+1}</div>
       <div class="who"><a class="name" href="#p=${encodeURIComponent(n)}" title="Открыть сетку: ${esc(n)}">${esc(n)}</a>${champ}</div>
       <div class="bar"><i style="width:${Math.round(s.pts/max*100)}%"></i></div>
-      <div class="pts">${s.pts}<small>${s.hits} угад.</small></div>
+      <div class="pts">${s.pts}<small>${s.hits} ${t('hits_short')}</small></div>
     </div>`;
   }).join('');
   document.getElementById('pillDecided').textContent = decidedCount();
   document.getElementById('pillTotal').textContent = DATA.rows.length;
   document.getElementById('boardNote').textContent =
-    decidedCount()===0 ? 'очки начисляются по мере ввода результатов'
-    : `сыграно ${decidedCount()} из ${DATA.rows.length}`;
+    decidedCount()===0 ? t('board_note_start')
+    : tf('board_note_progress', decidedCount(), DATA.rows.length);
 }
 
 function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -1152,21 +1193,20 @@ function renderMatches(){
     const rows = DATA.rows.filter(r => r.stage===stage);
     if(!rows.length) return;
     const w = WEIGHTS[stage];
-    const word = w>=5 ? 'баллов' : (w>1 ? 'балла' : 'балл');
-    html += `<div class="stage-label">${STAGE_TITLES[stage]} · ${w} ${word}</div><div class="matches">`;
+    html += `<div class="stage-label">${stageTitle(stage)} · ${w} ${ptsWord(w)}</div><div class="matches">`;
     rows.forEach((row,idx) => {
       const actual = RESULTS[row.id] || "";
       const teams = fixtureTeams(row);
       const isReady = ready(row);
-      const t0 = teams[0] ? esc(teams[0]) : '<span class="q">?</span>';
-      const t1 = teams[1] ? esc(teams[1]) : '<span class="q">?</span>';
+      const t0 = teams[0] ? esc(teamName(teams[0])) : '<span class="q">?</span>';
+      const t1 = teams[1] ? esc(teamName(teams[1])) : '<span class="q">?</span>';
       const num = row.stage==="1/16" ? (idx+1)+': ' : '';
       const date = row.date ? `<span class="date">${esc(row.date)}</span>` : '';
       const opts = optionsForSlot(row);
-      const optHtml = ['<option value="">— не сыграно —</option>']
-        .concat(opts.map(o => `<option ${o===actual?'selected':''}>${esc(o)}</option>`)).join('');
+      const optHtml = [`<option value="">${esc(t('opt_notplayed'))}</option>`]
+        .concat(opts.map(o => `<option value="${esc(o)}" ${o===actual?'selected':''}>${esc(teamName(o))}</option>`)).join('');
       const selDisabled = isReady ? '' : 'disabled';
-      const selTitle = isReady ? '' : 'title="Сначала отметьте победителей предыдущего раунда"';
+      const selTitle = isReady ? '' : `title="${esc(t('need_prev_round'))}"`;
       const picks = DATA.names.map(n => {
         const v = row.preds[n] || "—";
         let cls='';
@@ -1174,14 +1214,14 @@ function renderMatches(){
         const mark = cls==='right' ? ' ✓' : (cls==='wrong' ? ' ✗' : '');
         return `<div class="pick ${cls}">
           <span class="pname">${esc(n)}</span>
-          <span class="pteam">${esc(v)}<span class="tick">${mark}</span></span>
+          <span class="pteam">${esc(teamName(v))}<span class="tick">${mark}</span></span>
         </div>`;
       }).join('');
       html += `<div class="match ${actual?'decided':''} ${isReady?'':'pending'}">
         <div class="top">
           <div class="fixture">${num}${t0}<span class="vs">vs</span>${t1}${date}</div>
           <div class="actual">
-            <label for="sel-${row.id}">победитель</label>
+            <label for="sel-${row.id}">${esc(t('label_winner'))}</label>
             <select id="sel-${row.id}" data-id="${row.id}" ${selDisabled} ${selTitle}>${optHtml}</select>
           </div>
         </div>
@@ -1205,7 +1245,7 @@ function renderMatches(){
 
 function buildStageSeg(){
   const seg = document.getElementById('stageSeg');
-  const items = [["all","Все"]].concat(STAGE_ORDER.map(s => [s, STAGE_TITLES[s]]));
+  const items = [["all", t('stage_all')]].concat(STAGE_ORDER.map(s => [s, stageTitle(s)]));
   seg.innerHTML = items.map(([k,l]) =>
     `<button role="tab" aria-selected="${k===activeStage}" data-s="${k}" class="${k===activeStage?'on':''}">${l}</button>`).join('');
   seg.querySelectorAll('button').forEach(b => b.onclick = () => {
@@ -1241,17 +1281,17 @@ function bchip(row, name, opts={}){
   const teams = fixtureTeams(row);
   let meta = '';
   if(row.stage === "1/16"){
-    meta = `${esc(row.a)} – ${esc(row.b)}` + (row.date ? ` · ${esc(row.date)}` : '');
+    meta = `${esc(teamName(row.a))} – ${esc(teamName(row.b))}` + (row.date ? ` · ${esc(row.date)}` : '');
   }else if(teams[0] && teams[1]){
-    meta = `${esc(teams[0])} – ${esc(teams[1])}`;
+    meta = `${esc(teamName(teams[0]))} – ${esc(teamName(teams[1]))}`;
   }else{
-    meta = 'победитель пары';
+    meta = t('pair_winner');
   }
   const trophy = opts.champ ? '🏆 ' : '';
   const mark = st==='correct' ? '✓' : (st==='wrong' ? '✗' : '');
-  const fact = st==='wrong' ? `<span class="fact">факт: ${esc(actual)}</span>` : '';
+  const fact = st==='wrong' ? `<span class="fact">${esc(t('fact'))} ${esc(teamName(actual))}</span>` : '';
   return `<div class="bchip ${st}">
-    <div class="team">${trophy}<span class="tn">${esc(pick)}</span><span class="mark">${mark}</span></div>
+    <div class="team">${trophy}<span class="tn">${esc(teamName(pick))}</span><span class="mark">${mark}</span></div>
     <div class="meta">${meta}</div>
     ${fact}
   </div>`;
@@ -1264,23 +1304,23 @@ function renderPlayer(name){
     tbl[b].pts-tbl[a].pts || tbl[b].hits-tbl[a].hits || a.localeCompare(b,'ru'));
   const rank = ranked.indexOf(name) + 1;
   const champRow = byId["FINAL"];
-  const champ = s.champ && s.champ!=="—" ? `<span class="pstat pchamp">чемпион: <b>${esc(s.champ)}</b></span>` : '';
+  const champ = s.champ && s.champ!=="—" ? `<span class="pstat pchamp">${t('p_champion')}: <b>${esc(teamName(s.champ))}</b></span>` : '';
   document.getElementById('playerHead').innerHTML = `
     <h2>${esc(name)}</h2>
-    <span class="pstat">место <b>${rank}</b></span>
-    <span class="pstat"><b>${s.pts}</b> очков</span>
-    <span class="pstat"><b>${s.hits}</b> угадано из ${DATA.rows.length}</span>
+    <span class="pstat">${t('p_place')} <b>${rank}</b></span>
+    <span class="pstat"><b>${s.pts}</b> ${t('p_points')}</span>
+    <span class="pstat"><b>${s.hits}</b>/${DATA.rows.length} ${t('p_guessed')}</span>
     ${champ}`;
 
   document.getElementById('playerBracket').innerHTML = BRACKET_ROUNDS.map(stage => {
     const rows = DATA.rows.filter(r => r.stage===stage);
     const body = rows.map(r => bchip(r, name, {champ: stage==="Финал"})).join('');
-    return `<div class="bcol"><div class="rlabel">${STAGE_TITLES[stage]}</div><div class="col-body">${body}</div></div>`;
+    return `<div class="bcol"><div class="rlabel">${stageTitle(stage)}</div><div class="col-body">${body}</div></div>`;
   }).join('');
 
   const bronze = byId["BRONZE"];
   document.getElementById('playerThird').innerHTML =
-    `<div class="rlabel" style="text-align:left;margin-bottom:10px">${STAGE_TITLES["3 место"]}</div>` +
+    `<div class="rlabel" style="text-align:left;margin-bottom:10px">${stageTitle("3 место")}</div>` +
     bchip(bronze, name);
 }
 
@@ -1302,7 +1342,7 @@ document.getElementById('saveBtn').onclick = async () => {
   try{
     await pushResults();
     online = true; dirty = false; updateDirty(); reflectMode();
-    toast('Сохранено для всех');
+    toast(t('toast_saved'));
   }catch(e){ toast(e.message, true); }
   finally{ btn.disabled = false; }
 };
@@ -1312,8 +1352,7 @@ window.addEventListener('beforeunload', e => { if(dirty){ e.preventDefault(); e.
 
 const setupModal = document.getElementById('setupModal');
 function openSetup(){
-  document.getElementById('cfgState').textContent =
-    online ? 'Общие результаты загружены ✓' : 'Общие результаты сейчас недоступны (работаем локально).';
+  document.getElementById('cfgState').textContent = online ? t('cfg_loaded') : t('cfg_unavailable');
   setupModal.hidden=false;
   document.getElementById('setupClose').focus();
 }
@@ -1325,9 +1364,14 @@ document.addEventListener('keydown', e => { if(e.key==='Escape' && !setupModal.h
 
 document.getElementById('cfgShare').onclick = async () => {
   const url = location.origin + location.pathname;
-  try{ await navigator.clipboard.writeText(url); document.getElementById('cfgState').textContent='Ссылка скопирована — отправьте её друзьям.'; }
+  try{ await navigator.clipboard.writeText(url); document.getElementById('cfgState').textContent=t('share_copied'); }
   catch(e){ document.getElementById('cfgState').textContent=url; }
 };
+
+document.getElementById('langSeg').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-l]');
+  if(btn) setLang(btn.dataset.l);
+});
 
 let toastT;
 function toast(msg, err){
